@@ -1,4 +1,7 @@
 export * from "./layout";
+export * from "./layout-edit";
+export * from "./layout-presets";
+export * from "./layout-feather";
 export * from "./registry";
 export * from "./compositor";
 export * from "./theme";
@@ -11,4 +14,6 @@ export * from "./analysis";
 export * from "./midi-model";
 export * from "./midi-parse";
 export * from "./timeline";
+export * from "./timeline-edit";
 export * from "./frame-builder";
+export * from "./export";

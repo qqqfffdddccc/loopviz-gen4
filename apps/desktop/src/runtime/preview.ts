@@ -1,5 +1,6 @@
 import { Compositor } from "@loopviz/engine";
 import type { SlotKind } from "@loopviz/mod-api";
+import { previewGate } from "../export/preview-gate";
 import { ALL_SLOTS } from "../state/slots";
 import { activeParams, useAppStore, type AppState } from "../state/store";
 import { createFrameSource } from "./frame-source";
@@ -37,9 +38,14 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
   };
 
   const tick = (): void => {
+    if (previewGate.paused) {
+      frameId = requestAnimationFrame(tick);
+      return;
+    }
     const state = useAppStore.getState();
     compositor.setLayout(state.layout);
     compositor.setGap(state.gap * size.dpr);
+    compositor.setFeather(state.feather);
     compositor.setPostSettings(state.post);
     for (const slot of ALL_SLOTS) compositor.setParams(slot, activeParams(state, slot));
     compositor.renderFrame(buildFrame(transport.getTime(), { w: size.width, h: size.height, dpr: size.dpr }));
@@ -53,6 +59,7 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
   return {
     setSize(width, height, dpr) {
       size = { width, height, dpr };
+      previewGate.cssHeight = height / dpr;
       compositor.setSize(width, height);
     },
     stop() {

@@ -13,8 +13,8 @@ import { useSourceStore } from "../state/source-store";
 import { getAnalysis } from "./source-data";
 
 /** Окно нот с запасом под самые широкие настройки MIDI-модулей: каждый берёт из него нужную часть. */
-const MIDI_LOOKBEHIND_SEC = 2;
-const MIDI_LOOKAHEAD_SEC = 4.5;
+export const MIDI_LOOKBEHIND_SEC = 2;
+export const MIDI_LOOKAHEAD_SEC = 4.5;
 
 /** Собирает кадр из текущих данных. MIDI-индекс и палитра пересобираются только при смене входа. */
 export function createFrameSource(): (t: number, size: FrameContext["size"]) => FrameInput {

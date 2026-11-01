@@ -1,3 +1,4 @@
+import { ExportSection } from "./ExportSection";
 import { LayoutSection } from "./LayoutSection";
 import { ModulesSection } from "./ModulesSection";
 import { PostSection } from "./PostSection";
@@ -13,6 +14,7 @@ export function LeftPanel() {
       <LayoutSection />
       <ThemeSection />
       <PostSection />
+      <ExportSection />
     </aside>
   );
 }

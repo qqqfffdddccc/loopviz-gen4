@@ -1,4 +1,4 @@
-import { mapVideoTimeToSourceTime } from "@loopviz/engine";
+import { mapVideoTimeToSourceTime, videoTimeAfterRefit, type Timeline } from "@loopviz/engine";
 import { useSourceStore } from "../state/source-store";
 import { getAudioBuffer, getAudioContext } from "./source-data";
 
@@ -16,7 +16,7 @@ class Transport {
 
   constructor() {
     useSourceStore.subscribe((state, previous) => {
-      if (state.timeline.fragment !== previous.timeline.fragment) this.restartFromStart();
+      if (state.timeline.fragment !== previous.timeline.fragment) this.refit(previous.timeline, state.timeline);
     });
   }
 
@@ -73,16 +73,23 @@ class Transport {
     return context.outputLatency || context.baseLatency || 0;
   }
 
-  /** Фрагмент изменился во время воспроизведения: позиция внутри старого фрагмента потеряла смысл, играем с начала. */
-  private restartFromStart(): void {
-    const buffer = getAudioBuffer();
-    if (!buffer) return;
-    this.baseT = 0;
-    if (!this.running) return;
-    this.stopNode();
-    const context = getAudioContext();
-    this.startNode(buffer, context);
+  /** Перемотка внутри фрагмента: `videoT` отсчитывается от его начала. */
+  seek(videoT: number): void {
+    this.jumpTo(Math.max(0, videoT));
+  }
+
+  /** Плейхед, оставшийся внутри нового фрагмента, не прыгает: звук продолжается с той же точки исходника. */
+  private refit(previous: Timeline, next: Timeline): void {
+    this.jumpTo(videoTimeAfterRefit(previous, next, this.getTime()));
+  }
+
+  private jumpTo(videoT: number): void {
+    this.baseT = videoT;
     this.startedAt = this.clock();
+    const buffer = getAudioBuffer();
+    if (!buffer || !this.running) return;
+    this.stopNode();
+    this.startNode(buffer, getAudioContext());
   }
 
   private startNode(buffer: AudioBuffer, context: AudioContext): void {
@@ -115,6 +122,3 @@ class Transport {
 }
 
 export const transport = new Transport();
-
-// TEMP-DEBUG-STAGE4B
-if (import.meta.env.DEV) Object.assign(window, { __transport: transport });

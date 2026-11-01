@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { startPreview } from "../runtime/preview";
+import { Splitters } from "./Splitters";
 
 export function Preview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,7 +24,10 @@ export function Preview() {
 
   return (
     <main className="stage">
-      <canvas ref={canvasRef} className="preview" aria-label="Превью 9:16" />
+      <div className="preview-frame">
+        <canvas ref={canvasRef} className="preview" aria-label="Превью 9:16" />
+        <Splitters />
+      </div>
     </main>
   );
 }

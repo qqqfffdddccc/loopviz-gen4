@@ -1,15 +1,18 @@
 import {
   Color,
   Mesh,
-  MeshBasicMaterial,
   OrthographicCamera,
   PlaneGeometry,
   Scene,
+  Vector2,
   WebGLRenderer,
+  type MeshBasicMaterial,
   type WebGLRenderTarget,
 } from "three";
 import type { FrameInput, ModuleDefinition, ParamValues, SlotKind } from "@loopviz/mod-api";
+import { createFeatherMaterial } from "./feather-material";
 import { DEFAULT_LAYOUT, computeSlotRects, type Layout, type Rect } from "./layout";
+import { DEFAULT_FEATHER, zoneFeathers } from "./layout-feather";
 import { PostPipeline } from "./post/pipeline";
 import { DEFAULT_POST_SETTINGS, type PostSettings } from "./post/post-settings";
 import { SlotBinding } from "./slot-binding";
@@ -20,6 +23,7 @@ type ScenePass = "color" | "glow";
 
 interface Quad {
   mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  feather: Vector2;
   shown: boolean;
 }
 
@@ -39,6 +43,7 @@ export class Compositor {
   private layout: Layout = DEFAULT_LAYOUT;
   private postSettings: PostSettings = DEFAULT_POST_SETTINGS;
   private gap = 0;
+  private feather = DEFAULT_FEATHER;
   private width = 1;
   private height = 1;
   private workWidth = 0;
@@ -66,6 +71,11 @@ export class Compositor {
   /** Отступ между зонами в пикселях текущего размера canvas. */
   setGap(gap: number): void {
     this.gap = Math.max(0, gap);
+  }
+
+  /** Мягкость краёв зон у соседей: доля высоты зоны, поэтому не зависит от разрешения. */
+  setFeather(feather: number): void {
+    this.feather = Math.max(0, feather);
   }
 
   setPostSettings(settings: PostSettings): void {
@@ -136,6 +146,7 @@ export class Compositor {
   private draw(frame: FrameInput, width: number, height: number, gap: number, output: WebGLRenderTarget | null): void {
     this.applyWorkingSize(width, height);
     const rects = this.slotRects(width, height, gap);
+    this.applyFeathers(width, height, gap);
 
     for (const slot of SLOT_DRAW_ORDER) {
       const quad = this.quads.get(slot);
@@ -191,13 +202,19 @@ export class Compositor {
     return rects;
   }
 
+  private applyFeathers(width: number, height: number, gap: number): void {
+    for (const quad of this.quads.values()) quad.feather.set(0, 0);
+    const feathers = zoneFeathers(computeSlotRects(this.layout, width, height, gap), this.feather);
+    for (const { slot, top, bottom } of feathers) this.quads.get(slot)?.feather.set(top, bottom);
+  }
+
   private createQuad(renderOrder: number): Quad {
-    const material = new MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
+    const { material, feather } = createFeatherMaterial();
     const mesh = new Mesh(new PlaneGeometry(1, 1), material);
     mesh.renderOrder = renderOrder;
     mesh.visible = false;
     this.scene.add(mesh);
-    return { mesh, shown: false };
+    return { mesh, feather, shown: false };
   }
 
   private placeQuad({ mesh }: Quad, rect: Rect, binding: SlotBinding): void {

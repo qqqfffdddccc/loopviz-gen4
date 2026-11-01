@@ -1,12 +1,17 @@
 import { create } from "zustand";
 import {
+  BUILTIN_LAYOUT_PRESETS,
+  DEFAULT_FEATHER,
   DEFAULT_LAYOUT,
   DEFAULT_POST_SETTINGS,
   DEFAULT_THEME_SETTINGS,
   findPreset,
+  moveZone,
+  resetSplitToPreset,
   withHidden,
   withRatio,
   type Layout,
+  type LayoutPreset,
   type OklchColor,
   type PostSettings,
   type ThemeSettings,
@@ -20,7 +25,12 @@ export type GlobalPostKey = Exclude<keyof PostSettings, "slotGlow">;
 
 export interface AppState {
   layout: Layout;
+  /** Пресет, с которого началась раскладка: к нему возвращает двойной клик по разделителю. */
+  basePreset: LayoutPreset;
+  /** Отступ между зонами в CSS-пикселях превью. */
   gap: number;
+  /** Мягкость краёв зон, доля высоты зоны. */
+  feather: number;
   moduleIds: Record<SlotKind, string | null>;
   /** Значения параметров по слоту и id модуля: при смене модуля значения прежнего сохраняются. */
   moduleParams: Record<SlotKind, Record<string, ParamValues>>;
@@ -32,6 +42,12 @@ export interface AppState {
   resetParams(slot: SlotKind): void;
   setZoneHidden(zone: ZoneKind, hidden: boolean): void;
   setZoneRatio(zone: ZoneKind, ratio: number): void;
+  setLayout(layout: Layout): void;
+  moveZone(from: number, to: number): void;
+  applyLayoutPreset(preset: LayoutPreset): void;
+  resetSplitter(upper: ZoneKind, lower: ZoneKind): void;
+  setGap(gap: number): void;
+  setFeather(feather: number): void;
   selectSlot(slot: SlotKind): void;
   setThemePreset(id: string): void;
   setAccent(accent: Partial<OklchColor>): void;
@@ -67,7 +83,9 @@ function initialSlots(): Pick<AppState, "moduleIds" | "moduleParams"> {
 
 export const useAppStore = create<AppState>()((set) => ({
   layout: DEFAULT_LAYOUT,
-  gap: 12,
+  basePreset: BUILTIN_LAYOUT_PRESETS[0] ?? { id: "default", name: "КЛАССИКА", layout: DEFAULT_LAYOUT },
+  gap: 0,
+  feather: DEFAULT_FEATHER,
   ...initialSlots(),
   selectedSlot: "hero",
   theme: DEFAULT_THEME_SETTINGS,
@@ -94,6 +112,12 @@ export const useAppStore = create<AppState>()((set) => ({
     }),
   setZoneHidden: (zone, hidden) => set((s) => ({ layout: withHidden(s.layout, zone, hidden) })),
   setZoneRatio: (zone, ratio) => set((s) => ({ layout: withRatio(s.layout, zone, ratio) })),
+  setLayout: (layout) => set({ layout }),
+  moveZone: (from, to) => set((s) => ({ layout: moveZone(s.layout, from, to) })),
+  applyLayoutPreset: (preset) => set({ layout: preset.layout, basePreset: preset }),
+  resetSplitter: (upper, lower) => set((s) => ({ layout: resetSplitToPreset(s.layout, upper, lower, s.basePreset) })),
+  setGap: (gap) => set({ gap: Math.max(0, gap) }),
+  setFeather: (feather) => set({ feather: Math.max(0, feather) }),
   selectSlot: (slot) => set({ selectedSlot: slot }),
   setThemePreset: (id) => {
     const preset = findPreset(id);
@@ -105,6 +129,3 @@ export const useAppStore = create<AppState>()((set) => ({
   setPost: (key, value) => set((s) => ({ post: { ...s.post, [key]: value } })),
   setSlotGlow: (slot, value) => set((s) => ({ post: { ...s.post, slotGlow: { ...s.post.slotGlow, [slot]: value } } })),
 }));
-
-// TEMP-DEBUG-STAGE4B
-if (import.meta.env.DEV) Object.assign(window, { __appStore: useAppStore });
