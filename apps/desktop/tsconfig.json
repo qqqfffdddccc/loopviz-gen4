@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["vite/client"],
+    "tsBuildInfoFile": "node_modules/.tmp/tsconfig.tsbuildinfo"
+  },
+  "include": ["src", "vite.config.ts"],
+  "references": [
+    { "path": "../../packages/mod-api" },
+    { "path": "../../packages/engine" },
+    { "path": "../../packages/modules-builtin" }
+  ]
+}

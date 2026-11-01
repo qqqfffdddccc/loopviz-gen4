@@ -1,0 +1,15 @@
+{
+  "name": "@loopviz/modules-builtin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@loopviz/mod-api": "workspace:*",
+    "@loopviz/engine": "workspace:*"
+  },
+  "peerDependencies": {
+    "three": "^0.187.0"
+  }
+}

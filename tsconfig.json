@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/mod-api" },
+    { "path": "packages/engine" },
+    { "path": "packages/modules-builtin" },
+    { "path": "apps/desktop" }
+  ]
+}
