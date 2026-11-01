@@ -3,6 +3,8 @@ import { clamp, type SlotKind } from "@loopviz/mod-api";
 export interface PostSettings {
   /** 0..1 */
   grain: number;
+  /** 0..1: от мелкого плёночного к крупному мягкому. */
+  grainSize: number;
   /** 0..1 */
   vignette: number;
   /** 0..1 */
@@ -15,6 +17,7 @@ export interface PostSettings {
 
 export const DEFAULT_POST_SETTINGS: PostSettings = {
   grain: 0.3,
+  grainSize: 0.2,
   vignette: 0.35,
   bloomStrength: 0.7,
   bloomRadius: 0.45,
@@ -46,7 +49,24 @@ export function grainSeed(t: number): number {
   return frame % 1048576;
 }
 
+const GRAIN_SIZE_MIN = 0.5;
+const GRAIN_SIZE_MAX = 3;
+
+/** Размер ячейки зерна до округления к пикселю; grainSize 0.2 даёт 1 px при высоте 1920. */
+function rawGrainCell(outputHeight: number, grainSize: number): number {
+  const scale = GRAIN_SIZE_MIN + (GRAIN_SIZE_MAX - GRAIN_SIZE_MIN) * clamp(grainSize, 0, 1);
+  return (outputHeight / GRAIN_REFERENCE_HEIGHT) * scale;
+}
+
 /** Размер ячейки зерна в пикселях выхода. */
-export function grainCellSize(outputHeight: number): number {
-  return Math.max(1, outputHeight / GRAIN_REFERENCE_HEIGHT);
+export function grainCellSize(outputHeight: number, grainSize = DEFAULT_POST_SETTINGS.grainSize): number {
+  return Math.max(1, rawGrainCell(outputHeight, grainSize));
+}
+
+/**
+ * Ячейка мельче пикселя невозможна, поэтому её эмулируем ослаблением: усреднение k×k
+ * независимых зёрен уменьшает разброс в k раз. Так 1080p и 4K выглядят одинаково.
+ */
+export function grainAmplitudeScale(outputHeight: number, grainSize = DEFAULT_POST_SETTINGS.grainSize): number {
+  return Math.min(1, rawGrainCell(outputHeight, grainSize));
 }

@@ -11,7 +11,7 @@ import {
 import type { Theme } from "@loopviz/mod-api";
 import { BloomChain } from "./bloom-chain";
 import { FULLSCREEN_VERTEX, FullscreenRenderer } from "./fullscreen";
-import { grainCellSize, grainSeed, type PostSettings } from "./post-settings";
+import { grainAmplitudeScale, grainCellSize, grainSeed, type PostSettings } from "./post-settings";
 import { FINAL_FRAGMENT } from "./shaders";
 
 /** Множитель bloom от theme.glow: 0 даёт 0.4 от настройки, 1 даёт 1.6. */
@@ -19,6 +19,8 @@ const GLOW_GAIN_MIN = 0.4;
 const GLOW_GAIN_MAX = 1.6;
 /** Нормировка: средняя яркость маски после размытия мала, k подбирает видимый, но мягкий ореол. */
 const BLOOM_K = 4;
+/** Амплитуда зерна в sRGB при grain = 1. */
+const GRAIN_K = 0.14;
 
 function createHalfFloatTarget(): WebGLRenderTarget {
   return new WebGLRenderTarget(1, 1, {
@@ -99,8 +101,8 @@ export class PostPipeline {
     const gain = GLOW_GAIN_MIN + (GLOW_GAIN_MAX - GLOW_GAIN_MIN) * theme.glow;
     uBloom.value = settings.bloomStrength * gain * BLOOM_K;
     uVignette.value = settings.vignette;
-    uGrain.value = settings.grain;
-    uGrainCell.value = grainCellSize(this.height);
+    uGrain.value = settings.grain * GRAIN_K * grainAmplitudeScale(this.height, settings.grainSize);
+    uGrainCell.value = grainCellSize(this.height, settings.grainSize);
     uSeed.value = grainSeed(t);
     this.fullscreen.render(this.finalMaterial, output);
     this.renderer.setRenderTarget(null);

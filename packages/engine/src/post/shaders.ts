@@ -100,6 +100,26 @@ float rnd(uvec2 p, uint seed) {
   return float(pcg(p.x + pcg(p.y + pcg(seed)))) / 4294967295.0;
 }
 
+// Треугольное распределение из двух равномерных величин.
+float tri(uvec2 p, uint seed) {
+  return rnd(p, seed) + rnd(p, seed ^ 0x68E31DA4u) - 1.0;
+}
+
+// Крупные ячейки интерполируются smoothstep-ом между углами: зерно мягкое, без квадратов.
+float grainNoise(vec2 fragCoord, float cellSize, uint seed) {
+  if (cellSize <= 1.0) return tri(uvec2(fragCoord), seed);
+  vec2 p = fragCoord / cellSize;
+  uvec2 i = uvec2(floor(p));
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = tri(i, seed);
+  float b = tri(i + uvec2(1u, 0u), seed);
+  float c = tri(i + uvec2(0u, 1u), seed);
+  float d = tri(i + uvec2(1u, 1u), seed);
+  // Билинейная смесь теряет около трети разброса, компенсируем.
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y) * 1.5;
+}
+
 void main() {
   vec3 c = texture2D(tScene, vUv).rgb;
 
@@ -118,12 +138,13 @@ void main() {
 
   vec3 s = encodeSrgb(c);
 
-  // Треугольное распределение из двух равномерных величин. Seed задан номером кадра, а не Math.random.
-  uvec2 cell = uvec2(floor(gl_FragCoord.xy / uGrainCell));
-  uint seed = uint(uSeed);
-  float n = rnd(cell, seed) + rnd(cell, seed ^ 0x68E31DA4u) - 1.0;
+  // Seed задан номером кадра, а не Math.random.
+  float n = grainNoise(floor(gl_FragCoord.xy), uGrainCell, uint(uSeed));
+  // На светлой бумаге зерно в светах читается сильнее всего, поэтому там оно слабее.
+  float lum = dot(s, vec3(0.2126, 0.7152, 0.0722));
+  float tone = mix(1.0, 0.55, smoothstep(0.6, 1.0, lum));
   // Плюс 1/255 дизеринга убирает бэндинг мягких градиентов даже при нулевом зерне.
-  s += n * (uGrain * 0.14 + 1.0 / 255.0);
+  s += n * (uGrain * tone + 1.0 / 255.0);
 
   gl_FragColor = vec4(clamp(s, 0.0, 1.0), 1.0);
 }

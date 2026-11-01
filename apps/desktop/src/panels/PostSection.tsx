@@ -3,7 +3,8 @@ import { Section } from "../ui/Section";
 import { Slider } from "../ui/Slider";
 
 const CONTROLS: readonly { key: GlobalPostKey; label: string }[] = [
-  { key: "grain", label: "ЗЕРНО" },
+  { key: "grain", label: "ЗЕРНО: СИЛА" },
+  { key: "grainSize", label: "ЗЕРНО: РАЗМЕР" },
   { key: "vignette", label: "ВИНЬЕТКА" },
   { key: "bloomStrength", label: "СВЕЧЕНИЕ" },
   { key: "bloomRadius", label: "РАДИУС" },

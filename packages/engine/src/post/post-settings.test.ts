@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BLOOM_LEVELS, GRAIN_FPS, bloomWeights, grainCellSize, grainSeed } from "./post-settings";
+import { BLOOM_LEVELS, GRAIN_FPS, bloomWeights, grainAmplitudeScale, grainCellSize, grainSeed } from "./post-settings";
 
 describe("bloomWeights", () => {
   it("нормированы: сумма равна 1 при любом радиусе", () => {
@@ -42,5 +42,18 @@ describe("grainCellSize", () => {
     expect(grainCellSize(1920)).toBe(1);
     expect(grainCellSize(3840)).toBe(2);
     expect(grainCellSize(3840) / 3840).toBeCloseTo(grainCellSize(1920) / 1920, 10);
+  });
+
+  it("размер зерна масштабирует ячейку, крупное зерно одинаково в 1080p и 4K", () => {
+    expect(grainCellSize(1920, 1)).toBeCloseTo(3, 10);
+    expect(grainCellSize(3840, 1) / 3840).toBeCloseTo(grainCellSize(1920, 1) / 1920, 10);
+  });
+});
+
+describe("grainAmplitudeScale", () => {
+  it("ячейка мельче пикселя ослабляет зерно, крупнее пикселя не трогает", () => {
+    expect(grainAmplitudeScale(1920, 0)).toBeCloseTo(0.5, 10);
+    expect(grainAmplitudeScale(3840, 0)).toBe(1);
+    expect(grainAmplitudeScale(1920, 1)).toBe(1);
   });
 });
