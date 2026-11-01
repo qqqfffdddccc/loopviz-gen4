@@ -6,15 +6,26 @@ import {
   PlaneGeometry,
   Scene,
   WebGLRenderer,
+  type WebGLRenderTarget,
 } from "three";
 import type { FrameInput, ModuleDefinition, ParamValues, SlotKind } from "@loopviz/mod-api";
 import { DEFAULT_LAYOUT, computeSlotRects, type Layout, type Rect } from "./layout";
+import { PostPipeline } from "./post/pipeline";
+import { DEFAULT_POST_SETTINGS, type PostSettings } from "./post/post-settings";
 import { SlotBinding } from "./slot-binding";
 
 const SLOT_DRAW_ORDER: readonly SlotKind[] = ["hero", "midi", "wave", "overlay"];
 
+type ScenePass = "color" | "glow";
+
 interface Quad {
   mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  shown: boolean;
+}
+
+export interface OutputSize {
+  width: number;
+  height: number;
 }
 
 export class Compositor {
@@ -23,16 +34,21 @@ export class Compositor {
   private readonly camera = new OrthographicCamera(0, 1, 1, 0, -1, 1);
   private readonly quads = new Map<SlotKind, Quad>();
   private readonly bindings = new Map<SlotKind, SlotBinding>();
-  private readonly bgColor = new Color();
+  private readonly post: PostPipeline;
+  private readonly clearColor = new Color();
   private layout: Layout = DEFAULT_LAYOUT;
+  private postSettings: PostSettings = DEFAULT_POST_SETTINGS;
   private gap = 0;
   private width = 1;
   private height = 1;
+  private workWidth = 0;
+  private workHeight = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: false, alpha: false });
     this.renderer.setPixelRatio(1);
     this.renderer.autoClear = true;
+    this.post = new PostPipeline(this.renderer);
     SLOT_DRAW_ORDER.forEach((slot, index) => this.quads.set(slot, this.createQuad(index)));
   }
 
@@ -40,17 +56,20 @@ export class Compositor {
     this.width = Math.max(1, Math.round(width));
     this.height = Math.max(1, Math.round(height));
     this.renderer.setSize(this.width, this.height, false);
-    this.camera.right = this.width;
-    this.camera.top = this.height;
-    this.camera.updateProjectionMatrix();
+    this.applyWorkingSize(this.width, this.height);
   }
 
   setLayout(layout: Layout): void {
     this.layout = layout;
   }
 
+  /** Отступ между зонами в пикселях текущего размера canvas. */
   setGap(gap: number): void {
     this.gap = Math.max(0, gap);
+  }
+
+  setPostSettings(settings: PostSettings): void {
+    this.postSettings = settings;
   }
 
   setParams(slot: SlotKind, params: ParamValues): void {
@@ -80,27 +99,22 @@ export class Compositor {
 
   /** Результат зависит только от frameInput и текущего состояния compositor, не от часов. */
   renderFrame(frame: FrameInput): void {
-    const rects = this.slotRects();
-    this.bgColor.setRGB(...frame.theme.bg);
+    this.draw(frame, this.width, this.height, this.gap, null);
+  }
 
-    for (const slot of SLOT_DRAW_ORDER) {
-      const quad = this.quads.get(slot);
-      const binding = this.bindings.get(slot);
-      const rect = rects.get(slot);
-      if (!quad) continue;
-      if (!binding?.ready || !rect || rect.w < 1 || rect.h < 1) {
-        quad.mesh.visible = false;
-        continue;
-      }
-      binding.resize(rect.w, rect.h);
-      binding.render(frame);
-      this.placeQuad(quad, rect, binding);
-    }
-
-    this.renderer.setRenderTarget(null);
-    this.renderer.setClearColor(this.bgColor, 1);
-    this.renderer.clear();
-    this.renderer.render(this.scene, this.camera);
+  /**
+   * Рендерит кадр в заданном размере в offscreen-цель RGBA8 с закодированным sRGB.
+   * Кадр на выходе тот же, что в превью: зерно, bloom и виньетка считаются от высоты кадра,
+   * а отступ между зонами масштабируется. Цель принадлежит compositor и живёт до следующего вызова
+   * с другим размером. Чтение пикселей и экспорт делаются снаружи.
+   */
+  renderFrameToTarget(frame: FrameInput, { width, height }: OutputSize): WebGLRenderTarget {
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    const target = this.post.getOutputTarget(w, h);
+    const sized: FrameInput = { ...frame, size: { ...frame.size, w, h } };
+    this.draw(sized, w, h, (this.gap * h) / this.height, target);
+    return target;
   }
 
   dispose(): void {
@@ -110,15 +124,65 @@ export class Compositor {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
+    this.post.dispose();
     this.renderer.dispose();
   }
 
-  private slotRects(): Map<SlotKind, Rect> {
+  private draw(frame: FrameInput, width: number, height: number, gap: number, output: WebGLRenderTarget | null): void {
+    this.applyWorkingSize(width, height);
+    const rects = this.slotRects(width, height, gap);
+
+    for (const slot of SLOT_DRAW_ORDER) {
+      const quad = this.quads.get(slot);
+      const binding = this.bindings.get(slot);
+      const rect = rects.get(slot);
+      if (!quad) continue;
+      quad.shown = Boolean(binding?.ready && rect && rect.w >= 1 && rect.h >= 1);
+      if (!binding || !rect || !quad.shown) continue;
+      binding.resize(rect.w, rect.h);
+      binding.render(frame);
+      this.placeQuad(quad, rect, binding);
+    }
+
+    this.drawScene("color", frame, this.post.sceneTarget);
+    this.drawScene("glow", frame, this.post.glowTarget);
+    this.post.resolve(frame.theme, this.postSettings, frame.t, output);
+  }
+
+  /** Цветовой проход кладёт слоты на бумагу. Проход свечения рисует те же слоты на чёрном с opacity = glow слота. */
+  private drawScene(pass: ScenePass, frame: FrameInput, target: WebGLRenderTarget): void {
+    for (const [slot, quad] of this.quads) {
+      const glow = this.postSettings.slotGlow[slot];
+      quad.mesh.material.opacity = pass === "color" ? 1 : glow;
+      quad.mesh.visible = quad.shown && (pass === "color" || glow > 0);
+    }
+    if (pass === "color") {
+      this.clearColor.setRGB(...frame.theme.bg);
+      this.renderer.setClearColor(this.clearColor, 1);
+    } else {
+      this.renderer.setClearColor(0x000000, 0);
+    }
+    this.renderer.setRenderTarget(target);
+    this.renderer.render(this.scene, this.camera);
+    this.renderer.setRenderTarget(null);
+  }
+
+  private applyWorkingSize(width: number, height: number): void {
+    if (width === this.workWidth && height === this.workHeight) return;
+    this.workWidth = width;
+    this.workHeight = height;
+    this.camera.right = width;
+    this.camera.top = height;
+    this.camera.updateProjectionMatrix();
+    this.post.setSize(width, height);
+  }
+
+  private slotRects(width: number, height: number, gap: number): Map<SlotKind, Rect> {
     const rects = new Map<SlotKind, Rect>();
-    for (const rect of computeSlotRects(this.layout, this.width, this.height, this.gap)) {
+    for (const rect of computeSlotRects(this.layout, width, height, gap)) {
       rects.set(rect.slot, rect);
     }
-    rects.set("overlay", { x: 0, y: 0, w: this.width, h: this.height });
+    rects.set("overlay", { x: 0, y: 0, w: width, h: height });
     return rects;
   }
 
@@ -128,7 +192,7 @@ export class Compositor {
     mesh.renderOrder = renderOrder;
     mesh.visible = false;
     this.scene.add(mesh);
-    return { mesh };
+    return { mesh, shown: false };
   }
 
   private placeQuad({ mesh }: Quad, rect: Rect, binding: SlotBinding): void {
@@ -138,7 +202,6 @@ export class Compositor {
       mesh.material.needsUpdate = true;
     }
     mesh.scale.set(rect.w, rect.h, 1);
-    mesh.position.set(rect.x + rect.w / 2, this.height - (rect.y + rect.h / 2), 0);
-    mesh.visible = true;
+    mesh.position.set(rect.x + rect.w / 2, this.workHeight - (rect.y + rect.h / 2), 0);
   }
 }

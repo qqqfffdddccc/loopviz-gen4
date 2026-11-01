@@ -2,6 +2,8 @@ export * from "./layout";
 export * from "./registry";
 export * from "./compositor";
 export * from "./theme";
+export * from "./theme-presets";
+export * from "./post/post-settings";
 export * from "./frame";
 export * from "./fft";
 export * from "./analysis-types";

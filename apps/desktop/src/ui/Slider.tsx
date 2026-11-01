@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 
 interface SliderProps {
   label: string;
@@ -7,17 +7,26 @@ interface SliderProps {
   max: number;
   step: number;
   format?: (value: number) => string;
+  /** CSS-градиент для дорожки, например шкала оттенка. */
+  track?: string;
   onChange: (value: number) => void;
 }
 
-export function Slider({ label, value, min, max, step, format, onChange }: SliderProps) {
+interface TrackStyle extends CSSProperties {
+  "--track"?: string;
+}
+
+export function Slider({ label, value, min, max, step, format, track, onChange }: SliderProps) {
   const id = useId();
+  const style: TrackStyle | undefined = track ? { "--track": track } : undefined;
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
         type="range"
+        className={track ? "slider-track" : undefined}
+        style={style}
         min={min}
         max={max}
         step={step}

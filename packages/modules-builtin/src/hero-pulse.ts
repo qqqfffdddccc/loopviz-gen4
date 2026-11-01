@@ -5,21 +5,34 @@ type HeroPulseParams = { speed: number; intensity: number };
 
 const FRAGMENT = /* glsl */ `
 varying vec2 vUv;
-uniform vec3 uBg;
+uniform vec3 uInk;
 uniform vec3 uAccent;
 uniform vec3 uGlow;
 uniform float uPulse;
 uniform float uIntensity;
 uniform float uAspect;
+uniform float uTime;
+
+// Гауссово пятно: exp(-d^2 / r^2) даёт мягкий тяжёлый блюр без жёсткого края.
+float blob(vec2 p, vec2 c, float r) {
+  vec2 d = p - c;
+  return exp(-dot(d, d) / (r * r));
+}
 
 void main() {
   vec2 p = (vUv - vec2(0.5)) * vec2(uAspect, 1.0);
-  float d = length(p);
-  float radius = mix(0.18, 0.34, uPulse);
-  float body = smoothstep(radius + 0.45, 0.0, d);
-  vec3 col = mix(uBg, uAccent, body * uIntensity);
-  col += uGlow * pow(body, 3.0) * 0.35 * uPulse * uIntensity;
-  gl_FragColor = vec4(col, 1.0);
+  vec2 upper = vec2(0.03 * sin(uTime * 0.7), 0.1 + 0.02 * sin(uTime * 0.5));
+  vec2 lower = vec2(-0.04 * sin(uTime * 0.6 + 1.0), -0.12 + 0.02 * cos(uTime * 0.4));
+
+  float body = blob(p, upper, 0.17 + 0.035 * uPulse) + 0.8 * blob(p, lower, 0.12 + 0.03 * uPulse);
+  float inkAlpha = smoothstep(0.02, 1.0, body) * 0.72;
+
+  float core = blob(p, upper, 0.055 + 0.04 * uPulse) * uIntensity;
+  float coreMask = smoothstep(0.0, 0.7, core);
+  vec3 col = mix(uInk, uAccent, coreMask);
+  col = mix(col, uGlow, pow(core, 3.0) * 0.8);
+
+  gl_FragColor = vec4(col, max(inkAlpha, coreMask * 0.97));
 }
 `;
 
@@ -45,12 +58,13 @@ export const heroPulse = defineModule<HeroPulseParams>(
           depthTest: false,
           depthWrite: false,
           uniforms: {
-            uBg: { value: new Vector3() },
+            uInk: { value: new Vector3() },
             uAccent: { value: new Vector3() },
             uGlow: { value: new Vector3() },
             uPulse: { value: 0 },
             uIntensity: { value: 1 },
             uAspect: { value: 1 },
+            uTime: { value: 0 },
           },
         });
       },
@@ -59,18 +73,19 @@ export const heroPulse = defineModule<HeroPulseParams>(
       },
       render(frame, values) {
         if (!gl || !material) return;
-        const { uBg, uAccent, uGlow, uPulse, uIntensity, uAspect } = material.uniforms;
-        if (!uBg || !uAccent || !uGlow || !uPulse || !uIntensity || !uAspect) return;
+        const { uInk, uAccent, uGlow, uPulse, uIntensity, uAspect, uTime } = material.uniforms;
+        if (!uInk || !uAccent || !uGlow || !uPulse || !uIntensity || !uAspect || !uTime) return;
         const { rms, bands } = frame.audio;
         const bass = Math.max(bands[0] ?? 0, bands[1] ?? 0);
         const breathing = 0.5 + 0.5 * Math.sin(frame.t * values.speed * Math.PI * 2);
         const level = clamp(rms * 0.7 + bass * 0.5, 0, 1);
-        (uBg.value as Vector3).set(...frame.theme.bg);
+        (uInk.value as Vector3).set(...frame.theme.ink);
         (uAccent.value as Vector3).set(...frame.theme.accent);
         (uGlow.value as Vector3).set(...frame.theme.accentGlow);
         uPulse.value = clamp(0.1 * breathing + level, 0, 1);
-        uIntensity.value = values.intensity * (0.35 + 0.65 * clamp(rms + bass * 0.5, 0, 1));
+        uIntensity.value = values.intensity * (0.8 + 0.2 * clamp(rms + bass * 0.5, 0, 1));
         uAspect.value = aspect;
+        uTime.value = frame.t * values.speed;
         gl.helpers.renderFullscreenPass(material);
       },
       dispose() {

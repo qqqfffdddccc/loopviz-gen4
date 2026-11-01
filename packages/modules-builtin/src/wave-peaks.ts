@@ -30,13 +30,15 @@ export const wavePeaks = defineModule<WavePeaksParams>(
         const points = peaks.length / 2;
         const mid = canvas.height / 2;
         const half = mid * values.amplitude;
-        const ink = linearToCss(frame.theme.ink, 0.7);
+        const ink = linearToCss(frame.theme.ink, 0.4);
+        const unit = Math.max(1, frame.size.h / 1920);
+        const bar = Math.max(1, Math.round(unit * 1.5));
         const accent = linearToCss(frame.theme.accent);
         const playedX = progress * canvas.width;
 
-        for (let x = 0; x < canvas.width; x++) {
+        for (let x = 0; x < canvas.width; x += bar * 2) {
           const from = Math.floor((x / canvas.width) * points);
-          const to = Math.max(from + 1, Math.floor(((x + 1) / canvas.width) * points));
+          const to = Math.max(from + 1, Math.floor(((x + bar * 2) / canvas.width) * points));
           let min = 0;
           let max = 0;
           for (let i = from; i < to; i++) {
@@ -44,7 +46,7 @@ export const wavePeaks = defineModule<WavePeaksParams>(
             max = Math.max(max, peaks[i * 2 + 1] ?? 0);
           }
           ctx.fillStyle = x < playedX ? accent : ink;
-          ctx.fillRect(x, mid - max * half, 1, Math.max(1, (max - min) * half));
+          ctx.fillRect(x, mid - max * half, bar, Math.max(unit, (max - min) * half));
         }
       },
       dispose() {

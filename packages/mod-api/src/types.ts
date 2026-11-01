@@ -14,6 +14,8 @@ export interface Theme {
   accent: Rgb;
   accentGlow: Rgb;
   grain: number;
+  /** Сила свечения темы, 0..1. Compositor масштабирует ею bloom. */
+  glow: number;
 }
 
 export interface NoteEvent {

@@ -1,6 +1,8 @@
 import { LayoutSection } from "./LayoutSection";
 import { ModulesSection } from "./ModulesSection";
+import { PostSection } from "./PostSection";
 import { SourceSection } from "./SourceSection";
+import { ThemeSection } from "./ThemeSection";
 
 export function LeftPanel() {
   return (
@@ -9,6 +11,8 @@ export function LeftPanel() {
       <SourceSection />
       <ModulesSection />
       <LayoutSection />
+      <ThemeSection />
+      <PostSection />
     </aside>
   );
 }

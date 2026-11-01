@@ -40,6 +40,7 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
     const state = useAppStore.getState();
     compositor.setLayout(state.layout);
     compositor.setGap(state.gap * size.dpr);
+    compositor.setPostSettings(state.post);
     for (const slot of ALL_SLOTS) compositor.setParams(slot, state.params[slot]);
     compositor.renderFrame(buildFrame(transport.getTime(), { w: size.width, h: size.height, dpr: size.dpr }));
     frameId = requestAnimationFrame(tick);

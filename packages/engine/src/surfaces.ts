@@ -1,5 +1,6 @@
 import {
   CanvasTexture,
+  HalfFloatType,
   LinearFilter,
   Mesh,
   OrthographicCamera,
@@ -19,6 +20,7 @@ import {
   type SurfaceKind,
   type WebGLModuleContext,
 } from "@loopviz/mod-api";
+import { FULLSCREEN_VERTEX } from "./post/fullscreen";
 
 export interface Surface {
   readonly context: ModuleContext;
@@ -31,17 +33,9 @@ export interface Surface {
   dispose(): void;
 }
 
-const FULLSCREEN_VERTEX = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}
-`;
-
 class WebGLSurface implements Surface {
   readonly context: WebGLModuleContext;
-  private readonly target = new WebGLRenderTarget(1, 1, { depthBuffer: false });
+  private readonly target = new WebGLRenderTarget(1, 1, { depthBuffer: false, type: HalfFloatType });
   private readonly scene = new Scene();
   private readonly camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly quad = new Mesh(new PlaneGeometry(2, 2));
