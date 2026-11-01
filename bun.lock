@@ -21,7 +21,9 @@
       "name": "@loopviz/desktop",
       "version": "0.1.0",
       "dependencies": {
+        "@fontsource/ibm-plex-mono": "^5.3.0",
         "@fontsource/jetbrains-mono": "^5.3.0",
+        "@fontsource/space-mono": "^5.3.0",
         "@loopviz/engine": "workspace:*",
         "@loopviz/mod-api": "workspace:*",
         "@loopviz/modules-builtin": "workspace:*",
@@ -129,7 +131,11 @@
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.7.3", "", { "dependencies": { "@eslint/core": "^1.2.1", "levn": "^0.4.1" } }, "sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q=="],
 
+    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.3.0", "", {}, "sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q=="],
+
     "@fontsource/jetbrains-mono": ["@fontsource/jetbrains-mono@5.3.0", "", {}, "sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A=="],
+
+    "@fontsource/space-mono": ["@fontsource/space-mono@5.3.0", "", {}, "sha512-FrpBMOVWn3PRdRHlrZWC55X3kZG/2BTH7SM5ZyS/bky3iKya2BturI5lk+t0RoDQL2JyHzURsVq/EisCsxpI5A=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 

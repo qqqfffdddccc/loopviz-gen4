@@ -115,3 +115,6 @@ class Transport {
 }
 
 export const transport = new Transport();
+
+// TEMP-DEBUG-STAGE4B
+if (import.meta.env.DEV) Object.assign(window, { __transport: transport });

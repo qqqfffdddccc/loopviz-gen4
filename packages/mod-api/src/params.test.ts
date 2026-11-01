@@ -3,7 +3,7 @@ import { defaultParams, type ParamSchema } from "./params";
 
 describe("defaultParams", () => {
   it("collects defaults of every param kind", () => {
-    type P = { speed: number; tint: string; mode: string; glow: boolean; font: string; title: string };
+    type P = { speed: number; tint: string; mode: string; glow: boolean; font: string; title: string; logo: string };
     const schema: ParamSchema<P> = {
       speed: { kind: "slider", label: "Скорость", min: 0, max: 2, step: 0.1, default: 1 },
       tint: { kind: "color", label: "Цвет", default: "#ff5a28" },
@@ -11,6 +11,7 @@ describe("defaultParams", () => {
       glow: { kind: "toggle", label: "Свечение", default: true },
       font: { kind: "font", label: "Шрифт", default: "JetBrains Mono" },
       title: { kind: "text", label: "Заголовок", default: "LOOPVIZ" },
+      logo: { kind: "image", label: "Логотип", default: "" },
     };
 
     expect(defaultParams(schema)).toEqual({
@@ -20,6 +21,7 @@ describe("defaultParams", () => {
       glow: true,
       font: "JetBrains Mono",
       title: "LOOPVIZ",
+      logo: "",
     });
   });
 

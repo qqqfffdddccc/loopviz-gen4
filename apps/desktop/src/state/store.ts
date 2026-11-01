@@ -12,7 +12,7 @@ import {
   type ThemeSettings,
   type ZoneKind,
 } from "@loopviz/engine";
-import { defaultParams, type ParamValues, type SlotKind } from "@loopviz/mod-api";
+import { defaultParams, type ParamValue, type ParamValues, type SlotKind } from "@loopviz/mod-api";
 import { registry } from "../runtime/registry";
 import { ALL_SLOTS } from "./slots";
 
@@ -22,11 +22,14 @@ export interface AppState {
   layout: Layout;
   gap: number;
   moduleIds: Record<SlotKind, string | null>;
-  params: Record<SlotKind, ParamValues>;
+  /** Значения параметров по слоту и id модуля: при смене модуля значения прежнего сохраняются. */
+  moduleParams: Record<SlotKind, Record<string, ParamValues>>;
   selectedSlot: SlotKind;
   theme: ThemeSettings;
   post: PostSettings;
   setModule(slot: SlotKind, id: string | null): void;
+  setParam(slot: SlotKind, key: string, value: ParamValue): void;
+  resetParams(slot: SlotKind): void;
   setZoneHidden(zone: ZoneKind, hidden: boolean): void;
   setZoneRatio(zone: ZoneKind, ratio: number): void;
   selectSlot(slot: SlotKind): void;
@@ -38,20 +41,28 @@ export interface AppState {
   setSlotGlow(slot: SlotKind, value: number): void;
 }
 
-function paramsFor(id: string | null): ParamValues {
-  const module = id ? registry.get(id) : undefined;
+const NO_PARAMS: ParamValues = {};
+
+function defaultsFor(id: string): ParamValues {
+  const module = registry.get(id);
   return module ? defaultParams(module.params) : {};
 }
 
-function initialSlots(): Pick<AppState, "moduleIds" | "params"> {
+/** Текущие значения слота. Читается из рендер-цикла через getState(), без подписки React. */
+export function activeParams(state: Pick<AppState, "moduleIds" | "moduleParams">, slot: SlotKind): ParamValues {
+  const id = state.moduleIds[slot];
+  return (id ? state.moduleParams[slot][id] : undefined) ?? NO_PARAMS;
+}
+
+function initialSlots(): Pick<AppState, "moduleIds" | "moduleParams"> {
   const moduleIds: Record<SlotKind, string | null> = { hero: null, midi: null, wave: null, overlay: null };
-  const params: Record<SlotKind, ParamValues> = { hero: {}, midi: {}, wave: {}, overlay: {} };
+  const moduleParams: Record<SlotKind, Record<string, ParamValues>> = { hero: {}, midi: {}, wave: {}, overlay: {} };
   for (const slot of ALL_SLOTS) {
     const id = registry.list(slot)[0]?.id ?? null;
     moduleIds[slot] = id;
-    params[slot] = paramsFor(id);
+    if (id) moduleParams[slot][id] = defaultsFor(id);
   }
-  return { moduleIds, params };
+  return { moduleIds, moduleParams };
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -62,10 +73,25 @@ export const useAppStore = create<AppState>()((set) => ({
   theme: DEFAULT_THEME_SETTINGS,
   post: DEFAULT_POST_SETTINGS,
   setModule: (slot, id) =>
-    set((s) => ({
-      moduleIds: { ...s.moduleIds, [slot]: id },
-      params: { ...s.params, [slot]: paramsFor(id) },
-    })),
+    set((s) => {
+      const known = id ? s.moduleParams[slot][id] : undefined;
+      const moduleParams =
+        id && !known ? { ...s.moduleParams, [slot]: { ...s.moduleParams[slot], [id]: defaultsFor(id) } } : s.moduleParams;
+      return { moduleIds: { ...s.moduleIds, [slot]: id }, moduleParams };
+    }),
+  setParam: (slot, key, value) =>
+    set((s) => {
+      const id = s.moduleIds[slot];
+      if (!id) return {};
+      const current = s.moduleParams[slot][id] ?? defaultsFor(id);
+      return { moduleParams: { ...s.moduleParams, [slot]: { ...s.moduleParams[slot], [id]: { ...current, [key]: value } } } };
+    }),
+  resetParams: (slot) =>
+    set((s) => {
+      const id = s.moduleIds[slot];
+      if (!id) return {};
+      return { moduleParams: { ...s.moduleParams, [slot]: { ...s.moduleParams[slot], [id]: defaultsFor(id) } } };
+    }),
   setZoneHidden: (zone, hidden) => set((s) => ({ layout: withHidden(s.layout, zone, hidden) })),
   setZoneRatio: (zone, ratio) => set((s) => ({ layout: withRatio(s.layout, zone, ratio) })),
   selectSlot: (slot) => set({ selectedSlot: slot }),
@@ -79,3 +105,6 @@ export const useAppStore = create<AppState>()((set) => ({
   setPost: (key, value) => set((s) => ({ post: { ...s.post, [key]: value } })),
   setSlotGlow: (slot, value) => set((s) => ({ post: { ...s.post, slotGlow: { ...s.post.slotGlow, [slot]: value } } })),
 }));
+
+// TEMP-DEBUG-STAGE4B
+if (import.meta.env.DEV) Object.assign(window, { __appStore: useAppStore });

@@ -1,7 +1,7 @@
 import { Compositor } from "@loopviz/engine";
 import type { SlotKind } from "@loopviz/mod-api";
 import { ALL_SLOTS } from "../state/slots";
-import { useAppStore, type AppState } from "../state/store";
+import { activeParams, useAppStore, type AppState } from "../state/store";
 import { createFrameSource } from "./frame-source";
 import { registry } from "./registry";
 import { transport } from "./transport";
@@ -41,7 +41,7 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
     compositor.setLayout(state.layout);
     compositor.setGap(state.gap * size.dpr);
     compositor.setPostSettings(state.post);
-    for (const slot of ALL_SLOTS) compositor.setParams(slot, state.params[slot]);
+    for (const slot of ALL_SLOTS) compositor.setParams(slot, activeParams(state, slot));
     compositor.renderFrame(buildFrame(transport.getTime(), { w: size.width, h: size.height, dpr: size.dpr }));
     frameId = requestAnimationFrame(tick);
   };

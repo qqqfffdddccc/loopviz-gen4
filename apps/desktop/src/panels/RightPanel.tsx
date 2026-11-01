@@ -3,22 +3,24 @@ import { ALL_SLOTS, SLOT_LABELS } from "../state/slots";
 import { useAppStore } from "../state/store";
 import { Checkbox } from "../ui/Checkbox";
 import { Section } from "../ui/Section";
+import { ParamControl } from "./inspector/ParamControl";
 
 function ParamList() {
   const slot = useAppStore((s) => s.selectedSlot);
   const moduleId = useAppStore((s) => s.moduleIds[slot]);
-  const values = useAppStore((s) => s.params[slot]);
+  const resetParams = useAppStore((s) => s.resetParams);
   const module = moduleId ? registry.get(moduleId) : undefined;
-  if (!module) return <p className="muted">СЛОТ ПУСТ</p>;
+  if (!moduleId || !module) return <p className="muted">СЛОТ ПУСТ</p>;
   return (
-    <dl className="param-list">
-      {Object.entries(module.params).map(([key, descriptor]) => (
-        <div key={key} className="param-row">
-          <dt>{descriptor.label}</dt>
-          <dd>{String(values[key] ?? descriptor.default)}</dd>
-        </div>
+    <div className="inspector-params" key={moduleId}>
+      <p className="muted module-name">{module.name}</p>
+      {Object.entries(module.params).map(([name, descriptor]) => (
+        <ParamControl key={name} slot={slot} moduleId={moduleId} name={name} descriptor={descriptor} />
       ))}
-    </dl>
+      <button type="button" className="reset-button" onClick={() => resetParams(slot)}>
+        [↺] СБРОСИТЬ ПО УМОЛЧАНИЮ
+      </button>
+    </div>
   );
 }
 

@@ -12,6 +12,10 @@ import { useAppStore } from "../state/store";
 import { useSourceStore } from "../state/source-store";
 import { getAnalysis } from "./source-data";
 
+/** Окно нот с запасом под самые широкие настройки MIDI-модулей: каждый берёт из него нужную часть. */
+const MIDI_LOOKBEHIND_SEC = 2;
+const MIDI_LOOKAHEAD_SEC = 4.5;
+
 /** Собирает кадр из текущих данных. MIDI-индекс и палитра пересобираются только при смене входа. */
 export function createFrameSource(): (t: number, size: FrameContext["size"]) => FrameInput {
   let cachedModel: MidiModel | null = null;
@@ -34,6 +38,14 @@ export function createFrameSource(): (t: number, size: FrameContext["size"]) => 
       cachedGrain = post.grain;
       cachedTheme = buildTheme(settings, post.grain);
     }
-    return buildFrameInput(t, { analysis: getAnalysis(), midi: cachedQuery, timeline, theme: cachedTheme, size });
+    return buildFrameInput(t, {
+      analysis: getAnalysis(),
+      midi: cachedQuery,
+      timeline,
+      theme: cachedTheme,
+      size,
+      lookbehindSec: MIDI_LOOKBEHIND_SEC,
+      lookaheadSec: MIDI_LOOKAHEAD_SEC,
+    });
   };
 }

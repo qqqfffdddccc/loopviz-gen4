@@ -47,8 +47,11 @@ export interface FrameInput {
     lookbehind: number;
     lookahead: number;
   };
-  /** peaks: пары [min, max] по всему файлу, длина 2 * точек. progress: позиция исходника в файле, 0..1. */
-  wave: { peaks: Float32Array; progress: number };
+  /**
+   * peaks: пары [min, max] по всему файлу, длина 2 * точек. progress: позиция исходника в файле, 0..1.
+   * fragment: границы выбранного фрагмента в тех же долях файла, `start <= progress <= end` во время воспроизведения.
+   */
+  wave: { peaks: Float32Array; progress: number; fragment: { start: number; end: number } };
   theme: Theme;
   size: { w: number; h: number; dpr: number };
 }
@@ -62,6 +65,8 @@ export interface VisualModule<P extends ParamValues = ParamValues> {
   init(ctx: ModuleContext): void | Promise<void>;
   resize(w: number, h: number): void;
   render(frame: FrameInput, params: P): void;
+  /** Необязательно: дожидается ресурсов (шрифты, изображения) перед первым кадром экспорта. Превью его не ждёт. */
+  prepare?(params: P): void | Promise<void>;
   dispose(): void;
 }
 

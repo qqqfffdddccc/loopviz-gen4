@@ -11,12 +11,13 @@ export interface WaveformView {
   draft: Fragment | null;
   /** Время исходника под плейхедом. */
   playheadSec: number;
+  /** CSS-цвет акцента темы для выделения фрагмента. */
+  accent: string;
 }
 
 const INK = "#2a2a2e";
 const MUTED = "#8a877f";
 const LINE = "#cfcabd";
-const ACCENT = "#ff5e30";
 const MIN_LINE_PX = 7;
 const MIN_LABEL_PX = 42;
 
@@ -100,7 +101,7 @@ export function drawWaveform(ctx: CanvasRenderingContext2D, view: WaveformView):
 
   const left = (fragment.startSec / extent) * width;
   const right = (fragment.endSec / extent) * width;
-  ctx.fillStyle = ACCENT;
+  ctx.fillStyle = view.accent;
   ctx.globalAlpha = 0.1;
   ctx.fillRect(left, 0, right - left, height);
   ctx.globalAlpha = 1;

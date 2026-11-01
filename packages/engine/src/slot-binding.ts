@@ -23,6 +23,10 @@ export class SlotBinding {
     this.ready = !this.disposed;
   }
 
+  async prepare(): Promise<void> {
+    await this.module.prepare?.(this.params);
+  }
+
   resize(w: number, h: number): void {
     if (w === this.width && h === this.height) return;
     this.width = w;

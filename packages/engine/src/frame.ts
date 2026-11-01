@@ -23,7 +23,7 @@ export function createIdleFrame(options: IdleFrameOptions): FrameInput {
     bpm,
     audio: { rms: 0, bands: new Float32Array(BAND_COUNT), spectrum: new Float32Array(SPECTRUM_BINS), onset: 0 },
     midi: { active: [], window: [], range: [36, 84], lookbehind: 0.5, lookahead: 2 },
-    wave: { peaks: new Float32Array(WAVE_POINTS * 2), progress: 0 },
+    wave: { peaks: new Float32Array(WAVE_POINTS * 2), progress: 0, fragment: { start: 0, end: 1 } },
     theme,
     size: { w: width, h: height, dpr },
   };

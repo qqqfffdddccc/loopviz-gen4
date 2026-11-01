@@ -14,7 +14,7 @@ export interface PostSettings {
 }
 
 export const DEFAULT_POST_SETTINGS: PostSettings = {
-  grain: 0.5,
+  grain: 0.3,
   vignette: 0.35,
   bloomStrength: 0.7,
   bloomRadius: 0.45,

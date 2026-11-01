@@ -74,6 +74,14 @@ describe("buildFrameInput", () => {
     expect(frame.wave.peaks).toHaveLength(WAVE_POINTS * 2);
   });
 
+  it("reports the fragment bounds as fractions of the file next to progress", () => {
+    const frame = buildFrameInput(1, context());
+    expect(frame.wave.fragment.start).toBeCloseTo(0.2, 6);
+    expect(frame.wave.fragment.end).toBeCloseTo(0.6, 6);
+    expect(frame.wave.progress).toBeGreaterThanOrEqual(frame.wave.fragment.start);
+    expect(frame.wave.progress).toBeLessThanOrEqual(frame.wave.fragment.end);
+  });
+
   it("reports active notes and window on the loop clock with default lookahead", () => {
     const frame = buildFrameInput(1.1, context());
     expect(frame.midi.lookahead).toBe(2);

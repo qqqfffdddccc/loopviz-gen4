@@ -41,13 +41,20 @@ export interface TextParam {
   default: string;
 }
 
-export type ParamDescriptor = SliderParam | ColorParam | SelectParam | ToggleParam | FontParam | TextParam;
+/** Значение: data URL изображения или пустая строка. Инспектор даёт выбрать файл. */
+export interface ImageParam {
+  kind: "image";
+  label: string;
+  default: string;
+}
+
+export type ParamDescriptor = SliderParam | ColorParam | SelectParam | ToggleParam | FontParam | TextParam | ImageParam;
 
 type DescriptorFor<V extends ParamValue> = V extends number
   ? SliderParam
   : V extends boolean
     ? ToggleParam
-    : ColorParam | SelectParam | FontParam | TextParam;
+    : ColorParam | SelectParam | FontParam | TextParam | ImageParam;
 
 export type ParamSchema<P extends ParamValues> = { [K in keyof P]: DescriptorFor<P[K]> };
 

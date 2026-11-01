@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { clampFragment, mapVideoTimeToSourceTime, snapFragment, type Fragment } from "@loopviz/engine";
 import { getAnalysis } from "../runtime/source-data";
+import { accentHexFor } from "../runtime/theme-css";
 import { transport } from "../runtime/transport";
 import { drawWaveform, timeAtPixel } from "../runtime/waveform-view";
 import { sourceExtent, useSourceStore } from "../state/source-store";
+import { useAppStore } from "../state/store";
 
 const DRAG_THRESHOLD_PX = 3;
 
@@ -45,6 +47,7 @@ export function WaveformCanvas() {
         timeline: state.timeline,
         draft: draftRef.current,
         playheadSec: mapVideoTimeToSourceTime(state.timeline, transport.getTime()),
+        accent: accentHexFor(useAppStore.getState().theme),
       });
       frameId = requestAnimationFrame(tick);
     };

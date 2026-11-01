@@ -97,6 +97,11 @@ export class Compositor {
     }
   }
 
+  /** Ждёт ресурсы модулей (шрифты, изображения) с текущими параметрами. Экспорт вызывает перед первым кадром. */
+  async prepare(): Promise<void> {
+    await Promise.all([...this.bindings.values()].map((binding) => binding.prepare()));
+  }
+
   /** Результат зависит только от frameInput и текущего состояния compositor, не от часов. */
   renderFrame(frame: FrameInput): void {
     this.draw(frame, this.width, this.height, this.gap, null);

@@ -46,6 +46,10 @@ function shift(note: NoteEvent, by: number): NoteEvent {
   return { ...note, start: note.start + by, end: note.end + by };
 }
 
+function toFraction(sec: number, extent: number): number {
+  return extent > 0 ? Math.min(1, Math.max(0, sec / extent)) : 0;
+}
+
 /** Чистая функция от t и контекста: никаких часов и случайности, поэтому превью и экспорт совпадают. */
 export function buildFrameInput(t: number, ctx: FrameContext): FrameInput {
   const { analysis, midi, timeline, theme, size } = ctx;
@@ -76,7 +80,11 @@ export function buildFrameInput(t: number, ctx: FrameContext): FrameInput {
     },
     wave: {
       peaks: analysis?.peaks ?? EMPTY_PEAKS,
-      progress: progressBase > 0 ? Math.min(1, sourceT / progressBase) : 0,
+      progress: toFraction(sourceT, progressBase),
+      fragment: {
+        start: toFraction(timeline.fragment.startSec, progressBase),
+        end: toFraction(timeline.fragment.endSec, progressBase),
+      },
     },
     theme,
     size,

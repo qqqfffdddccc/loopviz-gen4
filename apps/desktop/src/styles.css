@@ -367,3 +367,65 @@ input[type="range"].slider-track::-webkit-slider-thumb {
   letter-spacing: 0.06em;
   color: var(--muted);
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.inspector-params {
+  display: grid;
+  gap: 10px;
+}
+
+.module-name {
+  margin: 0;
+  letter-spacing: 0.06em;
+}
+
+.text-field input[type="text"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.image-field {
+  position: relative;
+}
+
+.image-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 16px;
+}
+
+.image-actions .file-button {
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.image-thumb {
+  grid-column: 1 / -1;
+  max-width: 100%;
+  max-height: 56px;
+  object-fit: contain;
+  object-position: left;
+  border: 1px solid var(--line);
+}
+
+.reset-button {
+  margin-top: 6px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.reset-button:hover {
+  color: var(--ink);
+}
