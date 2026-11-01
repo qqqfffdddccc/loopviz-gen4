@@ -1,5 +1,6 @@
 import { createTimeline, parseProject, type MediaRef, type ProjectState } from "@loopviz/engine";
 import { errorMessage } from "../export/ipc";
+import { whenModsSettled } from "../mods/mods-store";
 import { cancelImports, importAudioBytes, importMidiBytes } from "../runtime/importers";
 import { registry } from "../runtime/registry";
 import { setAnalysis, setAudioBuffer } from "../runtime/source-data";
@@ -79,6 +80,7 @@ export async function loadProjectJson(json: string, options: LoadOptions): Promi
 
   const project = useProjectStore.getState();
   project.patch({ busy: "ОТКРЫТИЕ...", message: null });
+  await whenModsSettled();
   const warnings = missingModules(state);
   try {
     await untracked(async () => {

@@ -33,3 +33,30 @@ export const useModsStore = create<ModsState>()((set) => ({
       s.runtimeFailures[failure.moduleId] ? s : { runtimeFailures: { ...s.runtimeFailures, [failure.moduleId]: failure } },
     ),
 }));
+
+function isSettled(status: ModsStatus): boolean {
+  switch (status) {
+    case "ready":
+    case "unavailable":
+      return true;
+    case "idle":
+    case "loading":
+      return false;
+    default: {
+      const unreachable: never = status;
+      return unreachable;
+    }
+  }
+}
+
+/** Ждёт конца загрузки модов, чтобы проверка «модуль не найден» не срабатывала раньше времени. */
+export function whenModsSettled(): Promise<void> {
+  if (isSettled(useModsStore.getState().status)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = useModsStore.subscribe((state) => {
+      if (!isSettled(state.status)) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
