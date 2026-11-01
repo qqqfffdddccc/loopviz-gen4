@@ -51,7 +51,7 @@ html {
 .app {
   display: grid;
   grid-template-columns: clamp(180px, 22vw, 280px) minmax(320px, 1fr) clamp(180px, 22vw, 280px);
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 680px;
   height: 100%;
 }
@@ -544,4 +544,110 @@ input[type="range"].slider-track::-webkit-slider-thumb {
 
 .reset-button:hover {
   color: var(--ink);
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 5;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.topbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  align-items: center;
+  min-height: 22px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.topbar button {
+  font-weight: 700;
+}
+
+.topbar button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.project-name {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.project-name input {
+  width: 22ch;
+  padding: 1px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.project-name input:hover,
+.project-name input:focus {
+  border-bottom-color: var(--line);
+  outline: none;
+}
+
+.dirty-mark {
+  min-width: 1ch;
+  color: var(--accent);
+}
+
+.topbar-status,
+.topbar-note {
+  margin-left: auto;
+}
+
+.topbar-status + .topbar-note {
+  margin-left: 0;
+}
+
+.topbar-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: baseline;
+  margin: 4px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.topbar-notice.warn,
+.topbar-notice.error {
+  color: var(--accent);
+}
+
+.recent {
+  position: relative;
+}
+
+.recent-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 280px;
+  max-width: 480px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  list-style: none;
+}
+
+.recent-list button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

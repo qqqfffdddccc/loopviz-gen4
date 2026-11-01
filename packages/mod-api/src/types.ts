@@ -3,7 +3,9 @@ import type { ModuleContext, SurfaceKind } from "./context";
 
 export const API_VERSION = 1;
 
-export type SlotKind = "hero" | "midi" | "wave" | "overlay";
+export const SLOT_KINDS = ["hero", "midi", "wave", "overlay"] as const;
+
+export type SlotKind = (typeof SLOT_KINDS)[number];
 
 export type Rgb = readonly [number, number, number];
 
@@ -98,6 +100,8 @@ export interface ModManifest {
   version: string;
   apiVersion: number;
   entry: string;
+  author?: string;
+  description?: string;
 }
 
 export function assertNever(value: never): never {

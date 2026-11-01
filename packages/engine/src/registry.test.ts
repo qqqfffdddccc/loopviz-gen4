@@ -30,6 +30,16 @@ describe("ModuleRegistry", () => {
     expect(registry.create("missing")).toBeUndefined();
   });
 
+  it("unregisters a definition so the id can be registered again", () => {
+    const registry = new ModuleRegistry();
+    registry.register(fake("a", "hero"));
+    expect(registry.unregister("a")).toBe(true);
+    expect(registry.unregister("a")).toBe(false);
+    expect(registry.get("a")).toBeUndefined();
+    registry.register(fake("a", "hero"));
+    expect(registry.get("a")).toBeDefined();
+  });
+
   it("rejects duplicate ids", () => {
     const registry = new ModuleRegistry();
     registry.register(fake("a", "hero"));

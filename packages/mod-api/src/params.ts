@@ -48,6 +48,8 @@ export interface ImageParam {
   default: string;
 }
 
+export const PARAM_KINDS = ["slider", "color", "select", "toggle", "font", "text", "image"] as const;
+
 export type ParamDescriptor = SliderParam | ColorParam | SelectParam | ToggleParam | FontParam | TextParam | ImageParam;
 
 type DescriptorFor<V extends ParamValue> = V extends number

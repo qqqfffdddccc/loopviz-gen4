@@ -12,7 +12,7 @@ const LOG_EVERY_FRAMES = 60;
 export async function maybeRunAutotest(): Promise<void> {
   if (!import.meta.env.DEV || !isTauri()) return;
   const config = await autotestConfig().catch(() => null);
-  if (!config) return;
+  if (config?.mode !== "export") return;
   const log = (message: string): void => void autotestLog(message).catch(() => undefined);
 
   try {

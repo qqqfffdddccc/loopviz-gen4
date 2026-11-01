@@ -3,6 +3,7 @@ import { LeftPanel } from "./panels/LeftPanel";
 import { Preview } from "./panels/Preview";
 import { RightPanel } from "./panels/RightPanel";
 import { TransportBar } from "./panels/TransportBar";
+import { TopBar } from "./project/TopBar";
 import { importFiles } from "./runtime/importers";
 import { useFileDrop } from "./ui/useFileDrop";
 
@@ -11,6 +12,7 @@ export function App() {
   const dragging = useFileDrop(onFiles);
   return (
     <div className="app">
+      <TopBar />
       <LeftPanel />
       <Preview />
       <RightPanel />

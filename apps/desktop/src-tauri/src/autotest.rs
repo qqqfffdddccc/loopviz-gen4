@@ -8,20 +8,26 @@ use tauri::ipc::Response;
 use tauri::AppHandle;
 
 const ENV_REPO: &str = "LOOPVIZ_AUTOTEST_EXPORT";
+const ENV_PROJECT: &str = "LOOPVIZ_AUTOTEST_PROJECT";
 const ENV_RES: &str = "LOOPVIZ_AUTOTEST_RES";
 const FIXTURES: [&str; 2] = ["test-loop.wav", "test-loop.mid"];
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AutotestConfig {
+    mode: &'static str,
     resolution: String,
 }
 
-fn repo_dir() -> Option<PathBuf> {
-    env::var_os(ENV_REPO).filter(|value| !value.is_empty()).map(PathBuf::from)
+fn env_path(name: &str) -> Option<PathBuf> {
+    env::var_os(name).filter(|value| !value.is_empty()).map(PathBuf::from)
 }
 
-/// None, пока не задана LOOPVIZ_AUTOTEST_EXPORT: без неё хук не включается и команды ниже отказывают.
+fn repo_dir() -> Option<PathBuf> {
+    env_path(ENV_REPO).or_else(|| env_path(ENV_PROJECT))
+}
+
+/// None, пока не задана LOOPVIZ_AUTOTEST_EXPORT или LOOPVIZ_AUTOTEST_PROJECT: без них хук не включается и команды ниже отказывают.
 #[tauri::command]
 pub fn autotest_config() -> Option<AutotestConfig> {
     repo_dir()?;
@@ -29,7 +35,8 @@ pub fn autotest_config() -> Option<AutotestConfig> {
         Ok("4k") => "4k",
         _ => "1080p",
     };
-    Some(AutotestConfig { resolution: resolution.to_string() })
+    let mode = if env_path(ENV_REPO).is_some() { "export" } else { "project" };
+    Some(AutotestConfig { mode, resolution: resolution.to_string() })
 }
 
 #[tauri::command]

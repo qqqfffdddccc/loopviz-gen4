@@ -13,9 +13,11 @@ import type { FrameInput, ModuleDefinition, ParamValues, SlotKind } from "@loopv
 import { createFeatherMaterial } from "./feather-material";
 import { DEFAULT_LAYOUT, computeSlotRects, type Layout, type Rect } from "./layout";
 import { DEFAULT_FEATHER, zoneFeathers } from "./layout-feather";
+import type { FailurePolicy, ModuleFailure } from "./module-failure";
 import { PostPipeline } from "./post/pipeline";
 import { DEFAULT_POST_SETTINGS, type PostSettings } from "./post/post-settings";
 import { SlotBinding } from "./slot-binding";
+import { createSurface } from "./surfaces";
 
 const SLOT_DRAW_ORDER: readonly SlotKind[] = ["hero", "midi", "wave", "overlay"];
 
@@ -40,6 +42,7 @@ export class Compositor {
   private readonly bindings = new Map<SlotKind, SlotBinding>();
   private readonly post: PostPipeline;
   private readonly clearColor = new Color();
+  private readonly failurePolicy: FailurePolicy = { failFast: false, onFailure: null };
   private layout: Layout = DEFAULT_LAYOUT;
   private postSettings: PostSettings = DEFAULT_POST_SETTINGS;
   private gap = 0;
@@ -82,12 +85,24 @@ export class Compositor {
     this.postSettings = settings;
   }
 
+  /**
+   * Упавший модуль по умолчанию заменяется заглушкой, а сообщение уходит в `onFailure`.
+   * С `failFast` падение модуля бросает ModuleCrashError: так ведёт себя экспорт.
+   */
+  setFailureHandling(options: { failFast?: boolean; onFailure?: ((failure: ModuleFailure) => void) | null }): void {
+    if (options.failFast !== undefined) this.failurePolicy.failFast = options.failFast;
+    if (options.onFailure !== undefined) this.failurePolicy.onFailure = options.onFailure;
+  }
+
   setParams(slot: SlotKind, params: ParamValues): void {
     const binding = this.bindings.get(slot);
     if (binding) binding.params = params;
   }
 
-  /** Создаёт собственный экземпляр модуля для слота. Пока init не завершён, слот не рисуется. */
+  /**
+   * Создаёт собственный экземпляр модуля для слота. Пока init не завершён, слот не рисуется.
+   * Ошибка init при обычной политике даёт слот с заглушкой, при failFast бросается.
+   */
   async setModule(slot: SlotKind, definition: ModuleDefinition<ParamValues> | null): Promise<void> {
     if (definition && definition.slot !== slot) {
       throw new Error(`Module ${definition.id} belongs to slot ${definition.slot}, not ${slot}`);
@@ -96,7 +111,7 @@ export class Compositor {
     this.bindings.delete(slot);
     if (!definition) return;
 
-    const binding = new SlotBinding(definition, this.renderer);
+    const binding = new SlotBinding(definition, (kind) => createSurface(kind, this.renderer), this.failurePolicy);
     this.bindings.set(slot, binding);
     try {
       await binding.init();
@@ -218,7 +233,7 @@ export class Compositor {
   }
 
   private placeQuad({ mesh }: Quad, rect: Rect, binding: SlotBinding): void {
-    const texture = binding.surface.texture;
+    const texture = binding.texture;
     if (mesh.material.map !== texture) {
       mesh.material.map = texture;
       mesh.material.needsUpdate = true;

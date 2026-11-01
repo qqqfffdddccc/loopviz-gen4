@@ -17,3 +17,7 @@ export * from "./timeline";
 export * from "./timeline-edit";
 export * from "./frame-builder";
 export * from "./export";
+export * from "./mods";
+export * from "./module-failure";
+export * from "./placeholder";
+export * from "./project";

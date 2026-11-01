@@ -1,0 +1,10 @@
+{
+  "id": "example-glow-orb",
+  "name": "Glow Orb",
+  "slot": "hero",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "index.js",
+  "author": "LoopViz",
+  "description": "Мягкий светящийся шар на WebGL: дышит от громкости, вспыхивает на ударах"
+}

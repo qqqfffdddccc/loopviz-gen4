@@ -3,3 +3,5 @@ export * from "./params";
 export * from "./context";
 export * from "./math";
 export * from "./fonts";
+export * from "./glsl";
+export * from "./api";

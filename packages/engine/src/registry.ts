@@ -12,6 +12,10 @@ export class ModuleRegistry {
     this.definitions.set(definition.id, definition as unknown as AnyDefinition);
   }
 
+  unregister(id: string): boolean {
+    return this.definitions.delete(id);
+  }
+
   list(slot: SlotKind): AnyDefinition[] {
     return [...this.definitions.values()].filter((d) => d.slot === slot);
   }

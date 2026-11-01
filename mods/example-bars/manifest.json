@@ -1,0 +1,10 @@
+{
+  "id": "example-bars",
+  "name": "Rounded Bars",
+  "slot": "wave",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "index.js",
+  "author": "LoopViz",
+  "description": "Скруглённые столбики по восьми полосам спектра на canvas2d"
+}

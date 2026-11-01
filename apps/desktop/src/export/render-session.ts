@@ -34,6 +34,8 @@ export async function createRenderSession(size: ExportSize): Promise<RenderSessi
   const canvas = document.createElement("canvas");
   const compositor = new Compositor(canvas);
   try {
+    // Упавший мод должен оборвать экспорт, а не уйти в ролик заглушкой.
+    compositor.setFailureHandling({ failFast: true });
     const hostWidth = Math.max(1, Math.round((HOST_CANVAS_HEIGHT * size.width) / size.height));
     compositor.setSize(hostWidth, HOST_CANVAS_HEIGHT);
     compositor.setLayout(app.layout);

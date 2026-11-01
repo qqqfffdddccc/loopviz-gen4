@@ -24,6 +24,7 @@ export interface FinishInfo {
 }
 
 export interface AutotestConfig {
+  mode: "export" | "project";
   resolution: "1080p" | "4k";
 }
 

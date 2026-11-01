@@ -6,6 +6,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { maybeRunAutotest } from "./export/autotest";
+import { startMods } from "./mods/startup";
+import { maybeRunProjectAutotest } from "./project/autotest";
 import { syncThemeCss } from "./runtime/theme-css";
 import "./styles.css";
 
@@ -15,6 +17,8 @@ const root = document.getElementById("root");
 if (!root) throw new Error("#root not found");
 
 void maybeRunAutotest();
+void maybeRunProjectAutotest();
+startMods();
 
 createRoot(root).render(
   <StrictMode>

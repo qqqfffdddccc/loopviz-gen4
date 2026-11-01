@@ -1,0 +1,34 @@
+.mods-block {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mods-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mods-list li {
+  overflow-wrap: anywhere;
+}
+
+.mods-list .mod-error {
+  display: block;
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.mods-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.mods-actions button:disabled {
+  color: var(--muted);
+}
