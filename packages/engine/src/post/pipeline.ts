@@ -11,6 +11,7 @@ import {
 import type { Theme } from "@loopviz/mod-api";
 import { BloomChain } from "./bloom-chain";
 import { FULLSCREEN_VERTEX, FullscreenRenderer } from "./fullscreen";
+import { PackPass, type FrameSize, type ReadbackFormat } from "./pack-pass";
 import { grainAmplitudeScale, grainCellSize, grainSeed, type PostSettings } from "./post-settings";
 import { FINAL_FRAGMENT } from "./shaders";
 
@@ -41,6 +42,7 @@ export class PostPipeline {
   readonly glowTarget = createHalfFloatTarget();
   private readonly fullscreen: FullscreenRenderer;
   private readonly bloom: BloomChain;
+  private readonly packPass: PackPass;
   private readonly finalMaterial: ShaderMaterial;
   private output: WebGLRenderTarget | null = null;
   private width = 0;
@@ -49,6 +51,7 @@ export class PostPipeline {
   constructor(private readonly renderer: WebGLRenderer) {
     this.fullscreen = new FullscreenRenderer(renderer);
     this.bloom = new BloomChain(this.fullscreen);
+    this.packPass = new PackPass(this.fullscreen);
     this.finalMaterial = new ShaderMaterial({
       vertexShader: FULLSCREEN_VERTEX,
       fragmentShader: FINAL_FRAGMENT,
@@ -88,6 +91,14 @@ export class PostPipeline {
     return this.output;
   }
 
+  /** Переворачивает готовый RGBA8-кадр в порядок видео и при необходимости считает yuv420p. Цель остаётся привязанной. */
+  pack(format: ReadbackFormat, frame: FrameSize): WebGLRenderTarget {
+    if (!this.output) throw new Error("Нет выходной цели: сначала resolve в offscreen");
+    const target = this.packPass.render(format, this.output.texture, frame);
+    this.renderer.setRenderTarget(target);
+    return target;
+  }
+
   /** Читает sceneTarget и glowTarget, пишет результат в output (null означает canvas). */
   resolve(theme: Theme, settings: PostSettings, t: number, output: WebGLRenderTarget | null): void {
     const halo = this.bloom.render(this.glowTarget.texture, settings.bloomRadius);
@@ -112,6 +123,7 @@ export class PostPipeline {
     this.sceneTarget.dispose();
     this.glowTarget.dispose();
     this.output?.dispose();
+    this.packPass.dispose();
     this.bloom.dispose();
     this.finalMaterial.dispose();
     this.fullscreen.dispose();

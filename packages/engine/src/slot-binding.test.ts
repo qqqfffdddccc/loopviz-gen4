@@ -43,6 +43,7 @@ function fakeSurface(kind: "webgl" | "canvas2d"): FakeSurface {
     resize() {},
     begin() {},
     end() {},
+    upload() {},
     dispose() {
       this.disposed = true;
     },
@@ -172,5 +173,56 @@ describe("SlotBinding error isolation", () => {
     await pending;
     expect(failures).toHaveLength(0);
     expect(binding.ready).toBe(false);
+  });
+});
+
+describe("SlotBinding renderKey", () => {
+  it("skips render while the key and params stay the same", async () => {
+    let key = "a";
+    const { binding, calls } = setup({ renderKey: () => key });
+    await binding.init();
+    binding.resize(10, 10);
+    binding.render(frame);
+    binding.render(frame);
+    expect(calls.renders).toBe(1);
+    key = "b";
+    binding.render(frame);
+    expect(calls.renders).toBe(2);
+  });
+
+  it("redraws after a resize or a new params object", async () => {
+    const { binding, calls } = setup({ renderKey: () => 1 });
+    await binding.init();
+    binding.resize(10, 10);
+    binding.render(frame);
+    binding.resize(20, 10);
+    binding.render(frame);
+    binding.params = { ...binding.params };
+    binding.render(frame);
+    binding.render(frame);
+    expect(calls.renders).toBe(3);
+  });
+
+  it("always draws modules without renderKey", async () => {
+    const { binding, calls } = setup({});
+    await binding.init();
+    binding.resize(10, 10);
+    binding.render(frame);
+    binding.render(frame);
+    expect(calls.renders).toBe(2);
+  });
+
+  it("treats a throwing renderKey as a render failure", async () => {
+    const { binding, failures } = setup({
+      renderKey() {
+        throw new Error("bad key");
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await binding.init();
+    binding.resize(10, 10);
+    expect(() => binding.render(frame)).not.toThrow();
+    expect(failures[0]).toMatchObject({ stage: "render", message: "bad key" });
+    vi.restoreAllMocks();
   });
 });

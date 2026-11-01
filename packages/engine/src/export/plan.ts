@@ -1,4 +1,5 @@
 import { assertNever } from "@loopviz/mod-api";
+import { readbackByteLength, type ReadbackFormat } from "../post/pack-pass";
 
 export type ExportResolution = "1080p" | "4k";
 export type ExportCodec = "h264" | "hevc";
@@ -9,6 +10,8 @@ export interface ExportSize {
   height: number;
 }
 
+/** Кадров на GPU одновременно: пока один копируется, остальные рисуются. */
+export const READBACK_DEPTH = 3;
 const MAX_IN_FLIGHT = 8;
 const IN_FLIGHT_BUDGET_BYTES = 256 * 1024 * 1024;
 
@@ -27,22 +30,13 @@ export function exportFrameCount(totalSec: number, fps: number): number {
   return Math.max(0, Math.round(totalSec * fps));
 }
 
-export function frameByteLength({ width, height }: ExportSize): number {
-  return width * height * 4;
+export function frameByteLength(size: ExportSize, format: ReadbackFormat): number {
+  return readbackByteLength(format, size);
 }
 
 /** Сколько кадров может быть в полёте: до 8, но не больше бюджета памяти на кольцо буферов. */
 export function inFlightWindow(frameBytes: number): number {
   return Math.max(2, Math.min(MAX_IN_FLIGHT, Math.floor(IN_FLIGHT_BUDGET_BYTES / Math.max(1, frameBytes))));
-}
-
-/** WebGL читает строки снизу вверх, видео ждёт сверху вниз. */
-export function flipRowsInto(source: Uint8Array, target: Uint8Array, width: number, height: number): void {
-  const stride = width * 4;
-  for (let row = 0; row < height; row++) {
-    const from = (height - 1 - row) * stride;
-    target.set(source.subarray(from, from + stride), row * stride);
-  }
 }
 
 export function defaultOutputName(base: string, resolution: ExportResolution, fps: ExportFps): string {

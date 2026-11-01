@@ -6,12 +6,15 @@ import {
   exportSize,
   frameByteLength,
   inFlightWindow,
+  resolveReadbackFormat,
   runFrameLoop,
   totalDuration,
   type ExportCodec,
   type ExportFps,
   type ExportProgress,
   type ExportResolution,
+  type ReadbackFormat,
+  type StageProfiler,
 } from "@loopviz/engine";
 import { getAudioBuffer } from "../runtime/source-data";
 import { useSourceStore } from "../state/source-store";
@@ -25,6 +28,11 @@ export interface ExportRequest {
   fps: ExportFps;
   codec: ExportCodec;
   outputPath: string;
+  /** Формат кадров от GPU к ffmpeg. По умолчанию yuv420p; rgba нужен как запасной путь и для сверки. */
+  pixelFormat?: ReadbackFormat;
+  profiler?: StageProfiler;
+  /** Видит байты кадра перед отправкой в ffmpeg; буфер потом переиспользуется, поэтому копировать нужно сразу. */
+  frameTap?: (index: number, bytes: Uint8Array) => void;
   onProgress?: (progress: ExportProgress) => void;
 }
 
@@ -60,7 +68,8 @@ async function execute(request: ExportRequest, signal: AbortSignal): Promise<Exp
   const frameCount = exportFrameCount(total, request.fps);
   if (frameCount <= 0) throw new Error("Нулевая длительность ролика");
 
-  const session = await createRenderSession(size);
+  const pixelFormat = resolveReadbackFormat(request.pixelFormat ?? "yuv420p", size);
+  const session = await createRenderSession(size, pixelFormat, request.profiler);
   try {
     const audioPath = await writeTempWav(wav);
     await exportBegin({
@@ -68,21 +77,28 @@ async function execute(request: ExportRequest, signal: AbortSignal): Promise<Exp
       height: size.height,
       fps: request.fps,
       codec: request.codec,
+      pixelFormat,
       audioPath,
       outputPath: request.outputPath,
     });
     store.setPhase("running");
 
     let lastReport = 0;
-    const frameBytes = frameByteLength(size);
+    const frameBytes = frameByteLength(size, pixelFormat);
     await runFrameLoop({
       frameCount,
       fps: request.fps,
       frameBytes,
       window: inFlightWindow(frameBytes),
       renderer: session.renderer,
-      sink: { sendFrame: exportFrame },
+      sink: {
+        sendFrame: (index, bytes) => {
+          request.frameTap?.(index, bytes);
+          return exportFrame(index, bytes);
+        },
+      },
       signal,
+      profiler: request.profiler,
       onProgress: (progress) => {
         request.onProgress?.(progress);
         const now = performance.now();

@@ -30,6 +30,8 @@ export interface Surface {
   begin(): void;
   /** Вызывается после render модуля. */
   end(): void;
+  /** Загружает содержимое в GPU сейчас, а не при первой отрисовке: так загрузку видно отдельно. */
+  upload(): void;
   dispose(): void;
 }
 
@@ -75,6 +77,8 @@ class WebGLSurface implements Surface {
     this.renderer.setRenderTarget(null);
   }
 
+  upload(): void {}
+
   dispose(): void {
     this.target.dispose();
     this.quad.geometry.dispose();
@@ -86,7 +90,7 @@ class Canvas2DSurface implements Surface {
   texture: CanvasTexture<OffscreenCanvas>;
   private readonly canvas = new OffscreenCanvas(1, 1);
 
-  constructor() {
+  constructor(private readonly renderer: WebGLRenderer) {
     const ctx = this.canvas.getContext("2d");
     if (!ctx) throw new Error("2D context is unavailable on OffscreenCanvas");
     this.context = { surface: "canvas2d", canvas: this.canvas, ctx, helpers: commonHelpers };
@@ -120,6 +124,10 @@ class Canvas2DSurface implements Surface {
     this.texture.needsUpdate = true;
   }
 
+  upload(): void {
+    this.renderer.initTexture(this.texture);
+  }
+
   dispose(): void {
     this.texture.dispose();
   }
@@ -130,7 +138,7 @@ export function createSurface(kind: SurfaceKind, renderer: WebGLRenderer): Surfa
     case "webgl":
       return new WebGLSurface(renderer);
     case "canvas2d":
-      return new Canvas2DSurface();
+      return new Canvas2DSurface(renderer);
     default:
       return assertNever(kind);
   }

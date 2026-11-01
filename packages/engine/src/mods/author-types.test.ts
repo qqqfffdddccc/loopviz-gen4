@@ -43,6 +43,10 @@ describe("loopviz-mod-api.d.ts", () => {
     for (const key of leafKeys(sampleFrame)) expect(dts, `поле ${key}`).toMatch(new RegExp(`\\b${key}\\b`));
   });
 
+  it("declares the optional renderKey hook of a module", () => {
+    expect(dts).toMatch(/renderKey\?\(frame: FrameInput, params: P\): string \| number;/);
+  });
+
   it("declares every member of the runtime ModApi", () => {
     for (const key of Object.keys(createModApi())) expect(dts, `член api.${key}`).toMatch(new RegExp(`\\b${key}\\b`));
   });

@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { defaultOutputName, exportFrameCount, exportSize, flipRowsInto, frameByteLength, inFlightWindow } from "./plan";
+import { defaultOutputName, exportFrameCount, exportSize, frameByteLength, inFlightWindow } from "./plan";
 import { ExportCancelled, progressAt, runFrameLoop, type FrameRenderer, type FrameSink } from "./runner";
 
 class FakeRenderer implements FrameRenderer {
   readonly times: number[] = [];
-  render(index: number, t: number, out: Uint8Array): void {
+  readonly order: string[] = [];
+  private peak = 0;
+  private open = 0;
+
+  constructor(readonly depth = 3) {}
+
+  get maxOpen(): number {
+    return this.peak;
+  }
+
+  submit(index: number, t: number): void {
     this.times.push(t);
+    this.order.push(`s${index}`);
+    this.open++;
+    this.peak = Math.max(this.peak, this.open);
+  }
+
+  async collect(index: number, out: Uint8Array): Promise<void> {
+    await tick();
+    this.order.push(`c${index}`);
+    this.open--;
     out.fill(index % 256);
   }
 }
@@ -18,20 +37,14 @@ describe("plan", () => {
     expect(exportFrameCount(15, 30)).toBe(450);
     expect(exportFrameCount(2.5 / 3, 30)).toBe(25);
     expect(exportSize("4k")).toEqual({ width: 2160, height: 3840 });
-    expect(frameByteLength(exportSize("1080p"))).toBe(1080 * 1920 * 4);
+    expect(frameByteLength(exportSize("1080p"), "rgba")).toBe(1080 * 1920 * 4);
+    expect(frameByteLength(exportSize("1080p"), "yuv420p")).toBe(1080 * 1920 * 1.5);
   });
 
   it("ограничивает окно бюджетом памяти", () => {
-    expect(inFlightWindow(frameByteLength(exportSize("1080p")))).toBe(8);
-    expect(inFlightWindow(frameByteLength(exportSize("4k")))).toBe(8);
+    expect(inFlightWindow(frameByteLength(exportSize("1080p"), "yuv420p"))).toBe(8);
+    expect(inFlightWindow(frameByteLength(exportSize("4k"), "rgba"))).toBe(8);
     expect(inFlightWindow(100 * 1024 * 1024)).toBe(2);
-  });
-
-  it("переворачивает строки", () => {
-    const source = new Uint8Array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]);
-    const target = new Uint8Array(12);
-    flipRowsInto(source, target, 1, 3);
-    expect([...target]).toEqual([3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1]);
   });
 
   it("называет файл по пресету", () => {
@@ -54,6 +67,16 @@ describe("runFrameLoop", () => {
     expect(received.map((r) => r.index)).toEqual(Array.from({ length: 40 }, (_, i) => i));
     expect(received.every((r) => r.first === r.index % 256)).toBe(true);
     expect(renderer.times[39]).toBeCloseTo(39 / 30, 12);
+  });
+
+  it("держит на GPU не больше depth кадров и собирает их по порядку", async () => {
+    const renderer = new FakeRenderer(3);
+    const sink: FrameSink = { sendFrame: async () => undefined };
+    await runFrameLoop({ frameCount: 10, fps: 60, frameBytes: 4, window: 4, renderer, sink });
+    expect(renderer.maxOpen).toBe(3);
+    expect(renderer.order.slice(0, 4)).toEqual(["s0", "s1", "s2", "c0"]);
+    const collected = renderer.order.filter((entry) => entry.startsWith("c"));
+    expect(collected).toEqual(Array.from({ length: 10 }, (_, i) => `c${i}`));
   });
 
   it("не даёт убежать вперёд окна", async () => {

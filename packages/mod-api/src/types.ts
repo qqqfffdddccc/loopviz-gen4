@@ -67,6 +67,13 @@ export interface VisualModule<P extends ParamValues = ParamValues> {
   init(ctx: ModuleContext): void | Promise<void>;
   resize(w: number, h: number): void;
   render(frame: FrameInput, params: P): void;
+  /**
+   * Необязательно: ключ содержимого кадра. Если ключ и объект `params` те же, что на прошлом кадре,
+   * host не вызывает `render` и не загружает поверхность в GPU заново: прежняя картинка остаётся.
+   * Ключ обязан учитывать всё, от чего зависит рисунок, кроме размера поверхности и `params`
+   * (цвета темы, производные от кадра тексты, готовность шрифтов и картинок). Без метода кадр рисуется всегда.
+   */
+  renderKey?(frame: FrameInput, params: P): string | number;
   /** Необязательно: дожидается ресурсов (шрифты, изображения) перед первым кадром экспорта. Превью его не ждёт. */
   prepare?(params: P): void | Promise<void>;
   dispose(): void;

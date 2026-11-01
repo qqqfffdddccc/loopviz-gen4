@@ -149,3 +149,67 @@ void main() {
   gl_FragColor = vec4(clamp(s, 0.0, 1.0), 1.0);
 }
 `;
+
+/**
+ * Упаковка кадра для чтения (см. PackPass). Строка цели r лежит в памяти r-й, поэтому видеострока r
+ * берётся из кадра с высоты H-1-r. YUV420: цель шириной W/4 текселей и высотой 1.5H, тексель = 4 байта.
+ * Строки 0..H-1 это Y, дальше подряд плоскость U (H/4 строк по W байт), затем плоскость V.
+ */
+export const PACK_FRAGMENT = /* glsl */ `
+varying vec2 vUv;
+uniform sampler2D tSrc;
+uniform vec2 uSize;
+
+vec3 fetchRgb(int x, int videoRow) {
+  return texelFetch(tSrc, ivec2(x, int(uSize.y) - 1 - videoRow), 0).rgb;
+}
+
+#ifdef YUV420
+// BT.709, limited range: Y 16..235, Cb/Cr 16..240. Вход: sRGB-кодированные R'G'B' 0..1.
+float lumaCode(vec3 c) {
+  return 16.0 + 219.0 * dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+float chromaCode(vec3 c, bool isV) {
+  vec3 k = isV ? vec3(0.5, -0.454153, -0.045847) : vec3(-0.114572, -0.385428, 0.5);
+  return 128.0 + 224.0 * dot(c, k);
+}
+
+vec3 chromaAverage(int cx, int cy) {
+  return 0.25 * (fetchRgb(2 * cx, 2 * cy) + fetchRgb(2 * cx + 1, 2 * cy)
+    + fetchRgb(2 * cx, 2 * cy + 1) + fetchRgb(2 * cx + 1, 2 * cy + 1));
+}
+
+float toUnorm(float code) {
+  return floor(clamp(code, 0.0, 255.0) + 0.5) / 255.0;
+}
+#endif
+
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+#ifdef YUV420
+  int w = int(uSize.x);
+  int h = int(uSize.y);
+  vec4 outv = vec4(0.0);
+  if (p.y < h) {
+    for (int i = 0; i < 4; i++) {
+      outv[i] = toUnorm(lumaCode(fetchRgb(p.x * 4 + i, p.y)));
+    }
+  } else {
+    int row = p.y - h;
+    int planeRows = h / 4;
+    bool isV = row >= planeRows;
+    int offset = (row - (isV ? planeRows : 0)) * w + p.x * 4;
+    int chromaW = w / 2;
+    int cy = offset / chromaW;
+    int cx0 = offset - cy * chromaW;
+    for (int i = 0; i < 4; i++) {
+      outv[i] = toUnorm(chromaCode(chromaAverage(cx0 + i, cy), isV));
+    }
+  }
+  gl_FragColor = outv;
+#else
+  gl_FragColor = texelFetch(tSrc, ivec2(p.x, int(uSize.y) - 1 - p.y), 0);
+#endif
+}
+`;

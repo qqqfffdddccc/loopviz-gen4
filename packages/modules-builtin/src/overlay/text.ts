@@ -1,6 +1,6 @@
 import { BUNDLED_FONTS, defineModule, type Canvas2DModuleContext, type ModuleContext, type ParamSchema } from "@loopviz/mod-api";
 import { css, requireCanvas2d, unitOf } from "../common/canvas";
-import { ensureFont, fontSpec, requestFont } from "../common/fonts";
+import { ensureFont, fontSpec, isFontReady, requestFont } from "../common/fonts";
 import { OVERLAY_POSITIONS, anchorFor, formatBpm, lineLeft, metaLine, type HorizontalAlign, type OverlayPosition } from "./layout";
 import { getLogo, loadLogo } from "./logo-cache";
 
@@ -89,6 +89,12 @@ export const overlayText = defineModule<OverlayTextParams>(
         await Promise.all([ensureFont(p.font, WEIGHT, sampleText(p)), loadLogo(p.logo)]);
       },
       resize() {},
+      // Слой статичен: рисунок меняется только с текстом, цветом чернил, шрифтом и логотипом.
+      renderKey(frame, p) {
+        requestFont(p.font, WEIGHT, sampleText(p));
+        const ready = isFontReady(p.font, WEIGHT, sampleText(p)) && (!p.logo || getLogo(p.logo) !== null);
+        return `${formatBpm(p.bpm, frame.bpm)}|${frame.theme.ink.join(",")}|${frame.size.h}|${ready}`;
+      },
       render(frame, p) {
         if (!c2d || !p.enabled) return;
         const { ctx, canvas } = c2d;

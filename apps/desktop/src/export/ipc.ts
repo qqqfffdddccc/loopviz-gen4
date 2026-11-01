@@ -1,12 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import type { ExportCodec } from "@loopviz/engine";
+import type { ExportCodec, ReadbackFormat } from "@loopviz/engine";
 
 export interface BeginOptions {
   width: number;
   height: number;
   fps: number;
   codec: ExportCodec;
+  pixelFormat: ReadbackFormat;
   audioPath: string;
   outputPath: string;
 }
@@ -26,6 +27,8 @@ export interface FinishInfo {
 export interface AutotestConfig {
   mode: "export" | "project";
   resolution: "1080p" | "4k";
+  pixelFormat: ReadbackFormat;
+  cancelAfter: number | null;
 }
 
 export function isTauri(): boolean {

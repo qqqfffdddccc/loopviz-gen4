@@ -14,6 +14,8 @@ import { createFeatherMaterial } from "./feather-material";
 import { DEFAULT_LAYOUT, computeSlotRects, type Layout, type Rect } from "./layout";
 import { DEFAULT_FEATHER, zoneFeathers } from "./layout-feather";
 import type { FailurePolicy, ModuleFailure } from "./module-failure";
+import { NO_PROFILER, type StageProfiler } from "./export/stage-profiler";
+import type { ReadbackFormat } from "./post/pack-pass";
 import { PostPipeline } from "./post/pipeline";
 import { DEFAULT_POST_SETTINGS, type PostSettings } from "./post/post-settings";
 import { SlotBinding } from "./slot-binding";
@@ -51,6 +53,7 @@ export class Compositor {
   private height = 1;
   private workWidth = 0;
   private workHeight = 0;
+  private profiler: StageProfiler = NO_PROFILER;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: false, alpha: false });
@@ -65,6 +68,11 @@ export class Compositor {
     this.height = Math.max(1, Math.round(height));
     this.renderer.setSize(this.width, this.height, false);
     this.applyWorkingSize(this.width, this.height);
+  }
+
+  /** Замеры стадий кадра (модули по слотам, загрузка текстур, сцена, пост). Без вызова ничего не меряется. */
+  setProfiler(profiler: StageProfiler): void {
+    this.profiler = profiler;
   }
 
   setLayout(layout: Layout): void {
@@ -147,6 +155,17 @@ export class Compositor {
     return target;
   }
 
+  /**
+   * То же, что renderFrameToTarget, плюс проход упаковки: на выходе цель, которую readPixels читает
+   * готовым буфером в порядке видео (yuv420p или RGBA). Цель остаётся привязанной к renderer.
+   */
+  renderFramePacked(frame: FrameInput, size: OutputSize, format: ReadbackFormat): WebGLRenderTarget {
+    this.renderFrameToTarget(frame, size);
+    const packed = this.post.pack(format, { width: Math.max(1, Math.round(size.width)), height: Math.max(1, Math.round(size.height)) });
+    this.profiler.lap("pack");
+    return packed;
+  }
+
   dispose(): void {
     for (const binding of this.bindings.values()) binding.dispose();
     this.bindings.clear();
@@ -163,6 +182,7 @@ export class Compositor {
     const rects = this.slotRects(width, height, gap);
     this.applyFeathers(width, height, gap);
 
+    const ready: SlotKind[] = [];
     for (const slot of SLOT_DRAW_ORDER) {
       const quad = this.quads.get(slot);
       const binding = this.bindings.get(slot);
@@ -171,13 +191,28 @@ export class Compositor {
       quad.shown = Boolean(binding?.ready && rect && rect.w >= 1 && rect.h >= 1);
       if (!binding || !rect || !quad.shown) continue;
       binding.resize(rect.w, rect.h);
+      this.profiler.lap("other");
       binding.render(frame);
+      this.profiler.lap(`module:${slot}`);
+      ready.push(slot);
+    }
+    // Загрузка текстур после всех модулей: растеризация canvas2d идёт в другом процессе и успевает перекрыться.
+    for (const slot of ready) {
+      const quad = this.quads.get(slot);
+      const binding = this.bindings.get(slot);
+      const rect = rects.get(slot);
+      if (!quad || !binding || !rect) continue;
+      binding.upload();
+      this.profiler.lap(`upload:${slot}`);
       this.placeQuad(quad, rect, binding);
     }
 
+    this.profiler.lap("other");
     this.drawScene("color", frame, this.post.sceneTarget);
     this.drawScene("glow", frame, this.post.glowTarget);
+    this.profiler.lap("scene");
     this.post.resolve(frame.theme, this.postSettings, frame.t, output);
+    this.profiler.lap("post");
   }
 
   /** Цветовой проход кладёт слоты на бумагу. Проход свечения рисует те же слоты на чёрном с opacity = glow слота. */

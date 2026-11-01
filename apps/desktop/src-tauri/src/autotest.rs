@@ -10,6 +10,8 @@ use tauri::AppHandle;
 const ENV_REPO: &str = "LOOPVIZ_AUTOTEST_EXPORT";
 const ENV_PROJECT: &str = "LOOPVIZ_AUTOTEST_PROJECT";
 const ENV_RES: &str = "LOOPVIZ_AUTOTEST_RES";
+const ENV_PIXFMT: &str = "LOOPVIZ_AUTOTEST_PIXFMT";
+const ENV_CANCEL_AFTER: &str = "LOOPVIZ_AUTOTEST_CANCEL_AFTER";
 const FIXTURES: [&str; 2] = ["test-loop.wav", "test-loop.mid"];
 
 #[derive(Debug, Serialize)]
@@ -17,6 +19,9 @@ const FIXTURES: [&str; 2] = ["test-loop.wav", "test-loop.mid"];
 pub struct AutotestConfig {
     mode: &'static str,
     resolution: String,
+    pixel_format: &'static str,
+    /// Отменить экспорт после стольких кадров: проверка отмены на настоящем GPU и ffmpeg.
+    cancel_after: Option<u32>,
 }
 
 fn env_path(name: &str) -> Option<PathBuf> {
@@ -36,7 +41,12 @@ pub fn autotest_config() -> Option<AutotestConfig> {
         _ => "1080p",
     };
     let mode = if env_path(ENV_REPO).is_some() { "export" } else { "project" };
-    Some(AutotestConfig { mode, resolution: resolution.to_string() })
+    let pixel_format = match env::var(ENV_PIXFMT).as_deref() {
+        Ok("rgba") => "rgba",
+        _ => "yuv420p",
+    };
+    let cancel_after = env::var(ENV_CANCEL_AFTER).ok().and_then(|value| value.parse().ok());
+    Some(AutotestConfig { mode, resolution: resolution.to_string(), pixel_format, cancel_after })
 }
 
 #[tauri::command]

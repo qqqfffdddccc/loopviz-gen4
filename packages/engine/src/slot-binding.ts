@@ -30,6 +30,8 @@ export class SlotBinding {
   private surface: Surface | null = null;
   private placeholder: Surface | null = null;
   private placeholderSize = { w: 0, h: 0 };
+  private lastKey: string | number | null = null;
+  private lastKeyParams: ParamValues | null = null;
 
   constructor(
     private readonly definition: ModuleDefinition<ParamValues>,
@@ -69,6 +71,7 @@ export class SlotBinding {
     if (w === this.width && h === this.height) return;
     this.width = w;
     this.height = h;
+    this.lastKey = null;
     if (this.failure || !this.module || !this.surface) return;
     try {
       this.surface.resize(w, h);
@@ -86,20 +89,41 @@ export class SlotBinding {
     const { module, surface } = this;
     if (!module || !surface) return;
     let failed = false;
+    let began = false;
     let cause: unknown;
-    surface.begin();
     try {
+      if (this.canReuse(module, frame)) return;
+      surface.begin();
+      began = true;
       module.render(frame, this.params);
     } catch (error) {
       failed = true;
       cause = error;
     } finally {
-      surface.end();
+      if (began) surface.end();
     }
     if (failed) {
       this.fail("render", cause);
       this.drawPlaceholder(frame);
     }
+  }
+
+  /** Пропуск кадра по `renderKey`: тот же ключ, те же params и неизменный размер значит, что поверхность уже нарисована. */
+  private canReuse(module: VisualModule<ParamValues>, frame: FrameInput): boolean {
+    const key = module.renderKey?.(frame, this.params);
+    if (key === undefined) {
+      this.lastKey = null;
+      return false;
+    }
+    const same = key === this.lastKey && this.params === this.lastKeyParams;
+    this.lastKey = key;
+    this.lastKeyParams = this.params;
+    return same;
+  }
+
+  /** Загружает текстуру слота в GPU; у слота с заглушкой это её текстура. */
+  upload(): void {
+    (this.failure ? this.placeholder : this.surface)?.upload();
   }
 
   /** Идемпотентен: модуль могут отпустить и при замене слота, и при завершении устаревшего init. */

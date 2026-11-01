@@ -88,34 +88,56 @@ pub struct EncodeJob<'a> {
     pub fps: u32,
     pub codec: Codec,
     pub hardware: bool,
+    pub pixel_format: PixelFormat,
     pub audio: &'a Path,
     pub output: &'a Path,
 }
 
+/// Что именно лежит в кадрах на stdin: готовый yuv420p от GPU или RGBA, который ffmpeg переводит сам.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PixelFormat {
+    Yuv420p,
+    Rgba,
+}
+
+impl PixelFormat {
+    fn ffmpeg_name(self) -> &'static str {
+        match self {
+            PixelFormat::Yuv420p => "yuv420p",
+            PixelFormat::Rgba => "rgba",
+        }
+    }
+
+    /// Размер кадра в байтах; нужен проверке, что JS и Rust договорились о формате.
+    pub fn frame_bytes(self, width: u32, height: u32) -> u64 {
+        let pixels = u64::from(width) * u64::from(height);
+        match self {
+            PixelFormat::Yuv420p => pixels * 3 / 2,
+            PixelFormat::Rgba => pixels * 4,
+        }
+    }
+}
+
 pub fn build_args(job: &EncodeJob<'_>) -> Vec<String> {
-    let mut args: Vec<String> = [
-        "-hide_banner",
-        "-loglevel",
-        "warning",
-        "-nostats",
-        "-y",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "rgba",
-        "-s",
-    ]
-    .iter()
-    .map(|s| (*s).to_string())
-    .collect();
-    args.push(format!("{}x{}", job.width, job.height));
+    let mut args: Vec<String> = ["-hide_banner", "-loglevel", "warning", "-nostats", "-y", "-f", "rawvideo", "-pix_fmt"]
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
+    args.push(job.pixel_format.ffmpeg_name().to_string());
+    if job.pixel_format == PixelFormat::Yuv420p {
+        // Кадры уже в BT.709 limited: без этих тегов на входе ffmpeg счёл бы их неразмеченными.
+        args.extend(["-color_range", "tv", "-colorspace", "bt709"].iter().map(|s| (*s).to_string()));
+    }
+    args.extend(["-s".to_string(), format!("{}x{}", job.width, job.height)]);
     args.extend(["-r".to_string(), job.fps.to_string(), "-i".to_string(), "pipe:0".to_string()]);
     args.extend(["-i".to_string(), job.audio.display().to_string()]);
     args.extend(["-map", "0:v:0", "-map", "1:a:0"].iter().map(|s| (*s).to_string()));
+    if job.pixel_format == PixelFormat::Rgba {
+        args.extend(["-vf", "scale=in_range=full:out_range=tv:out_color_matrix=bt709"].iter().map(|s| (*s).to_string()));
+    }
     args.extend(
         [
-            "-vf",
-            "scale=in_range=full:out_range=tv:out_color_matrix=bt709",
             "-colorspace",
             "bt709",
             "-color_primaries",
@@ -169,11 +191,37 @@ mod tests {
             fps: 60,
             codec: Codec::H264,
             hardware: true,
+            pixel_format: PixelFormat::Rgba,
             audio: Path::new("/tmp/a.wav"),
             output: Path::new("/tmp/o.mp4.part"),
         };
         let args = build_args(&job).join(" ");
         assert!(args.contains("-f rawvideo -pix_fmt rgba -s 1080x1920 -r 60 -i pipe:0 -i /tmp/a.wav"));
+        assert!(args.contains("-vf scale=in_range=full:out_range=tv:out_color_matrix=bt709"));
         assert!(args.ends_with("/tmp/o.mp4.part"));
+    }
+
+    #[test]
+    fn yuv_input_skips_swscale_and_is_tagged() {
+        let job = EncodeJob {
+            width: 1080,
+            height: 1920,
+            fps: 60,
+            codec: Codec::H264,
+            hardware: true,
+            pixel_format: PixelFormat::Yuv420p,
+            audio: Path::new("/tmp/a.wav"),
+            output: Path::new("/tmp/o.mp4.part"),
+        };
+        let args = build_args(&job).join(" ");
+        assert!(args.contains("-f rawvideo -pix_fmt yuv420p -color_range tv -colorspace bt709 -s 1080x1920 -r 60 -i pipe:0"));
+        assert!(!args.contains("-vf"));
+        assert!(args.contains("-color_range tv"));
+    }
+
+    #[test]
+    fn frame_size_matches_pixel_format() {
+        assert_eq!(PixelFormat::Yuv420p.frame_bytes(1080, 1920), 1080 * 1920 * 3 / 2);
+        assert_eq!(PixelFormat::Rgba.frame_bytes(1080, 1920), 1080 * 1920 * 4);
     }
 }

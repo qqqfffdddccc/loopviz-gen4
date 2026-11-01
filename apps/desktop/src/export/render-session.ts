@@ -1,12 +1,16 @@
 import {
   CompositorFrameRenderer,
   Compositor,
+  NO_PROFILER,
+  READBACK_DEPTH,
   buildFrameInput,
   buildTheme,
   createMidiQuery,
   type ExportSize,
   type FrameContext,
   type FrameRenderer,
+  type ReadbackFormat,
+  type StageProfiler,
 } from "@loopviz/engine";
 import { MIDI_LOOKAHEAD_SEC, MIDI_LOOKBEHIND_SEC } from "../runtime/frame-source";
 import { registry } from "../runtime/registry";
@@ -27,12 +31,17 @@ export interface RenderSession {
  * Собственный compositor и собственные экземпляры модулей: превью их не трогает.
  * Состояние UI копируется один раз при создании, поэтому правки во время экспорта на ролик не влияют.
  */
-export async function createRenderSession(size: ExportSize): Promise<RenderSession> {
+export async function createRenderSession(
+  size: ExportSize,
+  format: ReadbackFormat,
+  profiler: StageProfiler = NO_PROFILER,
+): Promise<RenderSession> {
   const app = useAppStore.getState();
   const { timeline, midi, midiOffsetMs } = useSourceStore.getState();
 
   const canvas = document.createElement("canvas");
   const compositor = new Compositor(canvas);
+  compositor.setProfiler(profiler);
   try {
     // Упавший мод должен оборвать экспорт, а не уйти в ролик заглушкой.
     compositor.setFailureHandling({ failFast: true });
@@ -63,10 +72,19 @@ export async function createRenderSession(size: ExportSize): Promise<RenderSessi
       lookbehindSec: MIDI_LOOKBEHIND_SEC,
       lookaheadSec: MIDI_LOOKAHEAD_SEC,
     };
-    const renderer = new CompositorFrameRenderer(compositor, size, (t, frameSize) =>
-      buildFrameInput(t, { ...context, size: frameSize }),
+    const renderer = new CompositorFrameRenderer(
+      compositor,
+      size,
+      (t, frameSize) => buildFrameInput(t, { ...context, size: frameSize }),
+      { format, depth: READBACK_DEPTH, profiler },
     );
-    return { renderer, dispose: () => compositor.dispose() };
+    return {
+      renderer,
+      dispose: () => {
+        renderer.dispose();
+        compositor.dispose();
+      },
+    };
   } catch (error) {
     compositor.dispose();
     throw error;

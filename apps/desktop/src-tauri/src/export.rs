@@ -13,7 +13,7 @@ use tauri::async_runtime::{channel, spawn_blocking, Receiver, Sender};
 use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 
-use crate::ffmpeg::{build_args, encoder_name, hardware_encoder_works, resolve_ffmpeg, Codec, EncodeJob};
+use crate::ffmpeg::{build_args, encoder_name, hardware_encoder_works, resolve_ffmpeg, Codec, EncodeJob, PixelFormat};
 
 const CHANNEL_CAPACITY: usize = 16;
 const STDERR_TAIL_BYTES: usize = 6000;
@@ -26,6 +26,7 @@ pub struct ExportOptions {
     height: u32,
     fps: u32,
     codec: Codec,
+    pixel_format: PixelFormat,
     audio_path: String,
     output_path: String,
 }
@@ -87,6 +88,7 @@ struct Session {
     part: PathBuf,
     audio: PathBuf,
     encoder: String,
+    frame_bytes: u64,
 }
 
 #[derive(Default)]
@@ -171,6 +173,7 @@ fn spawn_session(options: &ExportOptions) -> Result<(Session, BeginInfo), String
         fps: options.fps,
         codec: options.codec,
         hardware,
+        pixel_format: options.pixel_format,
         audio: &audio,
         output: &part,
     };
@@ -204,6 +207,7 @@ fn spawn_session(options: &ExportOptions) -> Result<(Session, BeginInfo), String
         part,
         audio,
         encoder: encoder.clone(),
+        frame_bytes: options.pixel_format.frame_bytes(options.width, options.height),
     };
     let info = BeginInfo { encoder, hardware, ffmpeg: ffmpeg.display().to_string() };
     Ok((session, info))
@@ -238,11 +242,14 @@ pub async fn export_frame(state: State<'_, ExportState>, request: Request<'_>) -
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("кадр должен прийти сырыми байтами".to_string());
     };
-    let (tx, shared) = {
+    let (tx, shared, frame_bytes) = {
         let slot = lock(&state)?;
         let session = slot.as_ref().ok_or("экспорт не запущен")?;
-        (session.tx.clone().ok_or("экспорт уже завершается")?, Arc::clone(&session.shared))
+        (session.tx.clone().ok_or("экспорт уже завершается")?, Arc::clone(&session.shared), session.frame_bytes)
     };
+    if bytes.len() as u64 != frame_bytes {
+        return Err(format!("кадр {index}: {} байт вместо {frame_bytes}", bytes.len()));
+    }
     if let Some(error) = shared.error() {
         return Err(error);
     }
