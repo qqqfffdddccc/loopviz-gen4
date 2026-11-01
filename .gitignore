@@ -5,3 +5,4 @@ target
 *.tsbuildinfo
 apps/desktop/src-tauri/gen/schemas
 .cursor/
+release/
