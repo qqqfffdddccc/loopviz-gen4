@@ -1,14 +1,14 @@
 import type { ModuleRegistry } from "@loopviz/engine";
-import { createHeroPulse } from "./hero-pulse";
-import { createMidiBlocks } from "./midi-blocks";
-import { createOverlayText } from "./overlay-text";
-import { createWaveSine } from "./wave-sine";
+import { heroPulse } from "./hero-pulse";
+import { midiRoll } from "./midi-roll";
+import { overlayText } from "./overlay-text";
+import { wavePeaks } from "./wave-peaks";
 
-export { createHeroPulse, createMidiBlocks, createOverlayText, createWaveSine };
+export { heroPulse, midiRoll, overlayText, wavePeaks };
 
 export function registerBuiltinModules(registry: ModuleRegistry): void {
-  registry.register(createHeroPulse());
-  registry.register(createMidiBlocks());
-  registry.register(createWaveSine());
-  registry.register(createOverlayText());
+  registry.register(heroPulse);
+  registry.register(midiRoll);
+  registry.register(wavePeaks);
+  registry.register(overlayText);
 }

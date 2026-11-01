@@ -44,15 +44,22 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+html {
+  overflow-x: auto;
+}
+
 .app {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  grid-template-columns: clamp(180px, 22vw, 280px) minmax(320px, 1fr) clamp(180px, 22vw, 280px);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 680px;
   height: 100%;
 }
 
 .panel {
+  min-width: 0;
   padding: 20px;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .panel-left {
@@ -149,7 +156,7 @@ input[type="range"]::-webkit-slider-thumb {
 .stage {
   display: grid;
   place-items: center;
-  min-width: 0;
+  min-width: 320px;
   min-height: 0;
   padding: 24px;
   container-type: size;
@@ -185,4 +192,127 @@ input[type="range"]::-webkit-slider-thumb {
 .muted {
   margin: 8px 0 0;
   color: var(--muted);
+}
+
+.file-button {
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.source-block {
+  display: grid;
+  gap: 6px;
+}
+
+.source-block .muted {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: pre-wrap;
+}
+
+.notice {
+  margin: 0;
+  color: var(--accent);
+}
+
+.number-input {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.number-field {
+  grid-template-columns: 1fr auto;
+}
+
+.number-field input {
+  width: 8ch;
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  background: transparent;
+  text-align: right;
+}
+
+.muted-inline {
+  color: var(--muted);
+}
+
+.transport {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  padding: 10px 20px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.transport-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: center;
+}
+
+.transport-buttons {
+  display: flex;
+  gap: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.duration {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+
+.duration .field {
+  display: flex;
+  gap: 6px;
+}
+
+.bar-title {
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.total {
+  letter-spacing: 0.04em;
+}
+
+.waveform {
+  display: block;
+  width: 100%;
+  height: 96px;
+  border: 1px solid var(--line);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.fragment-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(244 241 234 / 0.88);
+  border: 2px dashed var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  pointer-events: none;
 }

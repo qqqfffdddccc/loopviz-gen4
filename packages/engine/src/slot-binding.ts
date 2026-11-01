@@ -1,5 +1,5 @@
 import type { WebGLRenderer } from "three";
-import { defaultParams, type FrameInput, type ParamValues, type VisualModule } from "@loopviz/mod-api";
+import { defaultParams, type FrameInput, type ModuleDefinition, type ParamValues, type VisualModule } from "@loopviz/mod-api";
 import { createSurface, type Surface } from "./surfaces";
 
 export class SlotBinding {
@@ -10,12 +10,12 @@ export class SlotBinding {
   private width = 0;
   private height = 0;
 
-  constructor(
-    readonly module: VisualModule<ParamValues>,
-    renderer: WebGLRenderer,
-  ) {
-    this.surface = createSurface(module.surface, renderer);
-    this.params = defaultParams(module.params);
+  readonly module: VisualModule<ParamValues>;
+
+  constructor(definition: ModuleDefinition<ParamValues>, renderer: WebGLRenderer) {
+    this.module = definition.create();
+    this.surface = createSurface(definition.surface, renderer);
+    this.params = defaultParams(definition.params);
   }
 
   async init(): Promise<void> {

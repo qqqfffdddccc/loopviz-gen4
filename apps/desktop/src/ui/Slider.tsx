@@ -6,10 +6,11 @@ interface SliderProps {
   min: number;
   max: number;
   step: number;
+  format?: (value: number) => string;
   onChange: (value: number) => void;
 }
 
-export function Slider({ label, value, min, max, step, onChange }: SliderProps) {
+export function Slider({ label, value, min, max, step, format, onChange }: SliderProps) {
   const id = useId();
   return (
     <div className="field">
@@ -23,7 +24,7 @@ export function Slider({ label, value, min, max, step, onChange }: SliderProps) 
         value={value}
         onChange={(event) => onChange(event.target.valueAsNumber)}
       />
-      <output htmlFor={id}>{value.toFixed(2)}</output>
+      <output htmlFor={id}>{format ? format(value) : value.toFixed(2)}</output>
     </div>
   );
 }

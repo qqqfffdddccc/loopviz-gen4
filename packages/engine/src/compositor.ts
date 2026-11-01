@@ -7,7 +7,7 @@ import {
   Scene,
   WebGLRenderer,
 } from "three";
-import type { FrameInput, ParamValues, SlotKind, VisualModule } from "@loopviz/mod-api";
+import type { FrameInput, ModuleDefinition, ParamValues, SlotKind } from "@loopviz/mod-api";
 import { DEFAULT_LAYOUT, computeSlotRects, type Layout, type Rect } from "./layout";
 import { SlotBinding } from "./slot-binding";
 
@@ -58,16 +58,16 @@ export class Compositor {
     if (binding) binding.params = params;
   }
 
-  /** Подключает модуль к слоту. Пока init не завершён, слот не рисуется. */
-  async setModule(slot: SlotKind, module: VisualModule<ParamValues> | null): Promise<void> {
-    if (module && module.slot !== slot) {
-      throw new Error(`Module ${module.id} belongs to slot ${module.slot}, not ${slot}`);
+  /** Создаёт собственный экземпляр модуля для слота. Пока init не завершён, слот не рисуется. */
+  async setModule(slot: SlotKind, definition: ModuleDefinition<ParamValues> | null): Promise<void> {
+    if (definition && definition.slot !== slot) {
+      throw new Error(`Module ${definition.id} belongs to slot ${definition.slot}, not ${slot}`);
     }
     this.bindings.get(slot)?.dispose();
     this.bindings.delete(slot);
-    if (!module) return;
+    if (!definition) return;
 
-    const binding = new SlotBinding(module, this.renderer);
+    const binding = new SlotBinding(definition, this.renderer);
     this.bindings.set(slot, binding);
     try {
       await binding.init();

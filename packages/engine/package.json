@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@loopviz/mod-api": "workspace:*"
+    "@loopviz/mod-api": "workspace:*",
+    "@tonejs/midi": "^2.0.28"
   },
   "peerDependencies": {
     "three": "^0.187.0"

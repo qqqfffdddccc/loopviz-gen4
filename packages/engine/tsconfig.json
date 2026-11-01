@@ -5,6 +5,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "rootDir": "src",
+    "types": ["node"],
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },

@@ -1,8 +1,10 @@
-import { Compositor, createIdleFrame } from "@loopviz/engine";
+import { Compositor } from "@loopviz/engine";
 import type { SlotKind } from "@loopviz/mod-api";
 import { ALL_SLOTS } from "../state/slots";
 import { useAppStore, type AppState } from "../state/store";
+import { createFrameSource } from "./frame-source";
 import { registry } from "./registry";
+import { transport } from "./transport";
 
 export interface PreviewHandle {
   setSize(width: number, height: number, dpr: number): void;
@@ -20,15 +22,15 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
   };
   let size = { width: 1, height: 1, dpr: 1 };
   let frameId = 0;
-  const startedAt = performance.now();
+  const buildFrame = createFrameSource();
 
   const syncModules = (state: AppState): void => {
     for (const slot of ALL_SLOTS) {
       const id = state.moduleIds[slot];
       if (applied[slot] === id) continue;
       applied[slot] = id;
-      const module = id ? (registry.get(id) ?? null) : null;
-      compositor.setModule(slot, module).catch((error: unknown) => {
+      const definition = id ? (registry.get(id) ?? null) : null;
+      compositor.setModule(slot, definition).catch((error: unknown) => {
         console.error(`Не удалось подключить модуль слота ${slot}`, error);
       });
     }
@@ -39,8 +41,7 @@ export function startPreview(canvas: HTMLCanvasElement): PreviewHandle {
     compositor.setLayout(state.layout);
     compositor.setGap(state.gap * size.dpr);
     for (const slot of ALL_SLOTS) compositor.setParams(slot, state.params[slot]);
-    const t = (performance.now() - startedAt) / 1000;
-    compositor.renderFrame(createIdleFrame({ t, width: size.width, height: size.height, dpr: size.dpr }));
+    compositor.renderFrame(buildFrame(transport.getTime(), { w: size.width, h: size.height, dpr: size.dpr }));
     frameId = requestAnimationFrame(tick);
   };
 
