@@ -10,7 +10,7 @@ import {
   oklchToLinear,
   type ThemeSettings,
 } from "./theme";
-import { THEME_PRESETS, findPreset, matchPreset } from "./theme-presets";
+import { DEFAULT_PRESET_ID, THEME_PRESETS, findPreset, matchPreset } from "./theme-presets";
 
 const inUnit = (rgb: readonly number[]): boolean => rgb.every((c) => c >= 0 && c <= 1);
 
@@ -69,16 +69,16 @@ describe("buildTheme", () => {
   });
 
   it("детерминирован и совпадает с DEFAULT_THEME для пресета по умолчанию", () => {
-    const ember = findPreset("ember");
-    expect(ember).toBeDefined();
-    if (ember) expect(buildTheme(ember)).toEqual(DEFAULT_THEME);
+    const preset = findPreset(DEFAULT_PRESET_ID);
+    expect(preset).toBeDefined();
+    if (preset) expect(buildTheme(preset)).toEqual(DEFAULT_THEME);
   });
 });
 
 describe("пресеты", () => {
-  it("6 штук с уникальными id, находятся по id и по настройкам", () => {
-    expect(THEME_PRESETS).toHaveLength(6);
-    expect(new Set(THEME_PRESETS.map((p) => p.id)).size).toBe(6);
+  it("7 штук с уникальными id, находятся по id и по настройкам", () => {
+    expect(THEME_PRESETS).toHaveLength(7);
+    expect(new Set(THEME_PRESETS.map((p) => p.id)).size).toBe(7);
     for (const preset of THEME_PRESETS) {
       expect(findPreset(preset.id)).toBe(preset);
       expect(matchPreset({ accent: { ...preset.accent }, paperTint: preset.paperTint, glow: preset.glow })).toBe(preset);

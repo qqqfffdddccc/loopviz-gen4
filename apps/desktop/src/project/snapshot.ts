@@ -38,7 +38,7 @@ export function freshProjectState(): ProjectState {
   const selected = { ...base.modules.selected };
   const params: Record<SlotKind, Record<string, ParamValues>> = { hero: {}, midi: {}, wave: {}, overlay: {} };
   for (const slot of ALL_SLOTS) {
-    const module = registry.list(slot)[0];
+    const module = registry.listVisible(slot)[0];
     selected[slot] = module?.id ?? null;
     if (module) params[slot][module.id] = defaultParams(module.params);
   }

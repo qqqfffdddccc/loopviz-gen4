@@ -20,6 +20,11 @@ export class ModuleRegistry {
     return [...this.definitions.values()].filter((d) => d.slot === slot);
   }
 
+  /** Модули для списка выбора и выбора по умолчанию: без скрытых. */
+  listVisible(slot: SlotKind): AnyDefinition[] {
+    return this.list(slot).filter((d) => !d.hidden);
+  }
+
   get(id: string): AnyDefinition | undefined {
     return this.definitions.get(id);
   }

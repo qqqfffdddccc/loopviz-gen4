@@ -89,6 +89,8 @@ export type ModuleBehavior<P extends ParamValues = ParamValues> = Omit<VisualMod
 
 /** Фабрика плюс метаданные. Превью и экспорт вызывают `create` каждый для своего экземпляра. */
 export interface ModuleDefinition<P extends ParamValues = ParamValues> extends ModuleMeta<P> {
+  /** Не показывать в списке выбора. Модуль остаётся в реестре, чтобы старые проекты открывались. */
+  hidden?: boolean;
   create(): VisualModule<P>;
 }
 

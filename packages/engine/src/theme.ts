@@ -1,6 +1,6 @@
 import { clampChroma, converter, formatHex, parse, type Oklch } from "culori";
 import { clamp, type Rgb, type Theme } from "@loopviz/mod-api";
-import { THEME_PRESETS } from "./theme-presets";
+import { DEFAULT_PRESET_ID, findPreset } from "./theme-presets";
 
 export interface OklchColor {
   l: number;
@@ -84,8 +84,8 @@ export function buildTheme(settings: ThemeSettings, grain = DEFAULT_GRAIN): Them
   return { bg, ink, accent: oklchToLinear(base), accentGlow: oklchToLinear(glowColor), grain, glow };
 }
 
-const ember = THEME_PRESETS[0];
-if (!ember) throw new Error("THEME_PRESETS is empty");
+const ember = findPreset(DEFAULT_PRESET_ID);
+if (!ember) throw new Error(`Unknown default theme preset: ${DEFAULT_PRESET_ID}`);
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = { accent: ember.accent, paperTint: ember.paperTint, glow: ember.glow };
 

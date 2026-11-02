@@ -8,9 +8,9 @@ import { useAppStore } from "../state/store";
 import { Section } from "../ui/Section";
 import { ModsBlock } from "./ModsBlock";
 
-/** Встроенные модули идут первыми, моды после них. */
-function optionsFor(slot: SlotKind): { id: string; label: string }[] {
-  const all = registry.list(slot);
+/** Встроенные модули идут первыми, моды после них. Скрытый модуль виден, только пока он выбран. */
+function optionsFor(slot: SlotKind, selected: string | null): { id: string; label: string }[] {
+  const all = registry.list(slot).filter((module) => !module.hidden || module.id === selected);
   const builtin = all.filter((module) => !isModModuleId(module.id));
   const mods = all.filter((module) => isModModuleId(module.id));
   return [
@@ -26,7 +26,7 @@ function ModuleSelect({ slot }: { slot: SlotKind }) {
   const selectSlot = useAppStore((s) => s.selectSlot);
   // Список читается из реестра, который меняется при загрузке модов: версия заставляет его перечитать.
   useModsStore((s) => s.version);
-  const options = optionsFor(slot);
+  const options = optionsFor(slot, value);
   const missing = value !== null && !options.some((option) => option.id === value);
   return (
     <div className="field">

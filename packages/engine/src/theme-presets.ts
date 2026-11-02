@@ -6,6 +6,7 @@ export interface ThemePreset extends ThemeSettings {
 }
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
+  { id: "sky", name: "SKY", accent: { l: 0.78, c: 0.09, h: 235 }, paperTint: 0.8, glow: 0.7 },
   { id: "ember", name: "EMBER", accent: { l: 0.7, c: 0.19, h: 40 }, paperTint: 0.5, glow: 0.6 },
   { id: "rose", name: "ROSE", accent: { l: 0.72, c: 0.16, h: 5 }, paperTint: 0.6, glow: 0.6 },
   { id: "ultramarine", name: "ULTRAMARINE", accent: { l: 0.5, c: 0.22, h: 265 }, paperTint: 0.5, glow: 0.7 },

@@ -74,7 +74,7 @@ function initialSlots(): Pick<AppState, "moduleIds" | "moduleParams"> {
   const moduleIds: Record<SlotKind, string | null> = { hero: null, midi: null, wave: null, overlay: null };
   const moduleParams: Record<SlotKind, Record<string, ParamValues>> = { hero: {}, midi: {}, wave: {}, overlay: {} };
   for (const slot of ALL_SLOTS) {
-    const id = registry.list(slot)[0]?.id ?? null;
+    const id = registry.listVisible(slot)[0]?.id ?? null;
     moduleIds[slot] = id;
     if (id) moduleParams[slot][id] = defaultsFor(id);
   }
