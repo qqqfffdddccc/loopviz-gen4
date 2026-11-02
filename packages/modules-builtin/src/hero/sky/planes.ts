@@ -41,6 +41,18 @@ void main() {
   float leak = exp(-leakK * leakK) * (0.14 + 0.05 * loop.x);
   col = 1.0 - (1.0 - col) * (1.0 - lit * leak);
 
+  // Пол с перспективной сеткой, уходящей к горизонту. Сдвиг ровно на целое число линий за петлю.
+  float below = uVp.y - p.y;
+  float floorK = smoothstep(0.0, 0.03, below);
+  float fz = 0.1 / max(below, 1e-3);
+  vec2 g = vec2((p.x - uVp.x) * fz * 2.2, fz * 1.6 - uTheta / TAU * 4.0);
+  vec2 tri = abs(fract(g - 0.5) - 0.5);
+  vec2 fw = max(fwidth(g), vec2(1e-4));
+  vec2 gl = (1.0 - smoothstep(0.0, 1.0, tri / (fw * 1.3))) * (1.0 - smoothstep(0.25, 0.7, fw));
+  float grid = max(gl.x, gl.y) * floorK * (1.0 - exp(-below * 14.0));
+  col = mix(col, mix(skyHorizon(uDepth), lit, 0.45), floorK * smoothstep(0.0, 0.45, below) * 0.3);
+  col = 1.0 - (1.0 - col) * (1.0 - lit * grid * 0.6);
+
   float rim = 0.0;
   for (int i = 0; i < PLANES; i++) {
     vec4 a = uPlaneA[i];
@@ -61,8 +73,8 @@ void main() {
     float lean = 0.62 + 0.38 * smoothstep(-a.w, a.w, toward >= 0.0 ? q.y : -q.y);
     float k = body * lean * b.z;
 
-    vec3 screened = 1.0 - (1.0 - col) * (1.0 - lit * k * 0.7);
-    vec3 shaded = mix(col, shade, k * 0.4);
+    vec3 screened = 1.0 - (1.0 - col) * (1.0 - lit * k * 0.6);
+    vec3 shaded = mix(col, shade, k * 0.55);
     col = mix(screened, shaded, b.w);
 
     rim += exp(-(sd * sd) / (soft * soft)) * b.z * (1.0 - b.w);
@@ -89,7 +101,7 @@ void main() {
 `;
 
 const params: ParamSchema<PlanesParams> = {
-  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.35 },
+  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.5 },
   count: { kind: "slider", label: "КОЛИЧЕСТВО ПЛОСКОСТЕЙ", min: 3, max: MAX_PLANES, step: 1, default: 9 },
   softness: { kind: "slider", label: "РАЗМЫТИЕ КРАЁВ", min: 0, max: 1, step: 0.01, default: 0.55 },
   tilt: { kind: "slider", label: "НАКЛОН, °", min: -45, max: 45, step: 1, default: 16 },

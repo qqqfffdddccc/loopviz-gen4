@@ -5,10 +5,10 @@ export const MAX_PLANES = 12;
 export const LOOP_BEATS = 16;
 
 const GOLDEN = 0.6180339887498949;
-const NEAR_Z = 0.35;
+const NEAR_Z = 0.5;
 const FAR_Z = 3;
 const BAR_SHARE = 0.65;
-const SHADE_SHARE = 0.3;
+const SHADE_SHARE = 0.4;
 
 export interface PlanesOptions {
   /** Ширина зоны к высоте: плоскости раскладываются по ширине. */
@@ -98,7 +98,7 @@ export function planeLayout(beat: number, options: PlanesOptions): PlaneLayout[]
     const cy = vp.y + worldY * scale;
     const fade = smooth(0, 0.2, phase) * (1 - smooth(0.7, 1, phase));
     const shaded = hash01(i, 6) < SHADE_SHARE;
-    const base = softness * 0.075 + 0.008;
+    const base = softness * 0.016 + 0.003;
 
     layout.push({
       cx,
@@ -106,7 +106,7 @@ export function planeLayout(beat: number, options: PlanesOptions): PlaneLayout[]
       hw: hw0 * scale,
       hh: hh0 * scale,
       angle: tilt + (hash01(i, 7) - 0.5) * 0.22 + (cx - vp.x) * 0.16 + turn,
-      soft: base * (0.45 + 0.55 * scale),
+      soft: base * (0.55 + 0.45 * scale),
       intensity: i < count ? fade * (0.55 + 0.45 * hash01(i, 8)) : 0,
       tone: shaded ? 1 : 0,
       depth: phase,

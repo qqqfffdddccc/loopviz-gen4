@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWindTrack, windDrift } from "./cirrus-wind";
+import { buildWindTrack, seamBlend, windDrift } from "./cirrus-wind";
 
 const DURATION = 20;
 const PER_SEC = 50;
@@ -65,5 +65,42 @@ describe("windDrift", () => {
     const forward = [2, 5, 9].map((t) => windDrift(track, t, 0.7, 0.5));
     const backward = [9, 5, 2].map((t) => windDrift(track, t, 0.7, 0.5)).reverse();
     expect(backward).toEqual(forward);
+  });
+});
+
+describe("seamBlend", () => {
+  const track = buildWindTrack(makePeaks(), DURATION);
+  const start = 4;
+  const end = 12;
+
+  it("вне окна вес нулевой, у конца единичный", () => {
+    expect(seamBlend(start, start, end)?.weight).toBe(0);
+    expect(seamBlend(8, start, end)?.weight).toBe(0);
+    expect(seamBlend(end, start, end)?.weight).toBe(1);
+  });
+
+  it("вес растёт монотонно в окне", () => {
+    let prev = 0;
+    for (let t = start; t <= end; t += 0.01) {
+      const weight = seamBlend(t, start, end)?.weight ?? 0;
+      expect(weight).toBeGreaterThanOrEqual(prev - 1e-12);
+      prev = weight;
+    }
+  });
+
+  it("смешанный дрейф непрерывен на стыке повтора", () => {
+    const blended = (t: number): number => {
+      const seam = seamBlend(t, start, end);
+      if (!seam) return Number.NaN;
+      const a = windDrift(track, t, 0.6, 0.6);
+      const b = windDrift(track, seam.shiftedT, 0.6, 0.6);
+      return a + (b - a) * seam.weight;
+    };
+    expect(blended(end)).toBeCloseTo(blended(start), 9);
+  });
+
+  it("вырожденный фрагмент не даёт сшивки", () => {
+    expect(seamBlend(5, 5, 5)).toBeNull();
+    expect(seamBlend(5, 6, 4)).toBeNull();
   });
 });

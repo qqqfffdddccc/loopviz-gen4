@@ -172,7 +172,7 @@ void main() {
 `;
 
 const params: ParamSchema<NodesParams> = {
-  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.35 },
+  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.5 },
   count: { kind: "slider", label: "ЧИСЛО УЗЛОВ", min: 10, max: MAX_NODES, step: 1, default: 34 },
   boxes: { kind: "slider", label: "РАМКИ И СВЯЗИ", min: 0, max: MAX_BOXES, step: 1, default: 10 },
   fog: { kind: "slider", label: "ПЛОТНОСТЬ ДЫМКИ", min: 0, max: 1, step: 0.01, default: 0.5 },

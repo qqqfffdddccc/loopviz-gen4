@@ -74,12 +74,15 @@ vec3 skyAt(vec2 q, vec2 drift, float detail) {
   float n = fbm(u, 0.0, 5);
   float bias = -q.y * 0.55 + 0.04;
   float thick = n * detail + bias;
-  float cover = smoothstep(-0.12, 0.3, thick);
+  float cover = smoothstep(-0.06, 0.24, thick);
   float core = smoothstep(0.1, 0.75, thick);
 
-  vec3 lit = mix(vec3(1.0), uGlow, 0.1);
-  vec3 shade = mix(mix(uAccent, vec3(0.5, 0.56, 0.64), 0.45) * 0.78, base, 0.25);
-  vec3 cloud = mix(lit, shade, core * (0.45 + 0.3 * smoothstep(0.3, -0.5, q.y)));
+  float n2 = fbm(u + vec2(-0.09, 0.11), 0.0, 4);
+  float side = clamp(0.55 + (n - n2) * 2.6, 0.0, 1.0);
+  vec3 lit = skyCloudLit();
+  vec3 shade = skyCloudShade(uDepth);
+  float body = (0.3 + 0.7 * core) * (0.55 + 0.45 * smoothstep(0.3, -0.5, q.y));
+  vec3 cloud = mix(shade, lit, mix(1.0, side, body));
 
   vec2 sunP = vec2(0.06 * uAspect, 0.1);
   float sd = length(q - sunP);
@@ -119,7 +122,7 @@ void main() {
 
   vec3 col = skyAt(q, drift, mix(1.0, 0.55, soft));
 
-  float tone = (hash12(vec2(id, 51.0)) - 0.5) * 0.07 * (0.4 + uShuffle);
+  float tone = (hash12(vec2(id, 51.0)) - 0.5) * 0.1 * (0.4 + uShuffle);
   float flash = uPulse * uReact * step(hash12(vec2(id, 52.0)), 0.3) * 0.12;
   float flick = sin(uTheta * (2.0 + floor(hash12(vec2(id, 53.0)) * 3.0)) + hash12(vec2(id, 54.0)) * TAU);
   col += tone + flash + uHigh * 0.045 * flick;
@@ -142,7 +145,7 @@ void main() {
 `;
 
 const params: ParamSchema<CollageParams> = {
-  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.35 },
+  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.5 },
   density: { kind: "slider", label: "ПЛОТНОСТЬ ПЛИТОК", min: 0, max: 1, step: 0.01, default: 0.5 },
   shuffle: { kind: "slider", label: "СДВИГ ПЛИТОК", min: 0, max: 1, step: 0.01, default: 0.5 },
   reaction: { kind: "slider", label: "РЕАКЦИЯ НА ЗВУК", min: 0, max: 1, step: 0.01, default: 0.6 },

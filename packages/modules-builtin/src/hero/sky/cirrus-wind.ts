@@ -91,3 +91,27 @@ export function windDrift(track: WindTrack | null, sourceT: number, reaction: nu
   const gust = sample(track.gust, track.perSec, t, 0);
   return t + k * (env - t) + Math.max(0, gustAmount) * gust;
 }
+
+export interface SeamBlend {
+  /** Вес второй копии поля: 0 вне окна, плавно растёт до 1 к концу фрагмента. */
+  weight: number;
+  /** Время исходника для второй копии: на длину фрагмента раньше текущего. */
+  shiftedT: number;
+}
+
+const SEAM_SHARE = 0.2;
+const SEAM_MAX_SEC = 2.5;
+
+/**
+ * Окно сшивки повтора фрагмента. Дрейф монотонен, поэтому на стыке он скачет назад на D(конец) - D(начало).
+ * В конце фрагмента смешиваем поле с дрейфом D(t) и поле с дрейфом D(t - длина): на самом стыке вес второго равен 1,
+ * а его дрейф D(конец - длина) = D(начало), то есть ровно то, с чего стартует следующий повтор.
+ * Возвращает null, если фрагмент вырожден.
+ */
+export function seamBlend(sourceT: number, fragStartSec: number, fragEndSec: number): SeamBlend | null {
+  const length = fragEndSec - fragStartSec;
+  if (!(length > 0) || !Number.isFinite(sourceT)) return null;
+  const window = Math.min(SEAM_MAX_SEC, length * SEAM_SHARE);
+  const x = Math.min(1, Math.max(0, (sourceT - (fragEndSec - window)) / window));
+  return { weight: x * x * (3 - 2 * x), shiftedT: sourceT - length };
+}

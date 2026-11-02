@@ -51,11 +51,11 @@ void main() {
 
   float wideGlow = exp(-r * 2.6);
   float midGlow = exp(-r * r / 0.05);
-  sky = mix(sky, mix(skyHorizon(uDepth), vec3(1.0), 0.5), wideGlow * 0.45);
+  sky = mix(sky, mix(skyHorizon(uDepth), vec3(1.0), 0.5), wideGlow * 0.3);
 
   // Небо внутри кольца чуть темнее, как на фотографиях гало.
   float inside = smoothstep(uHaloR, uHaloR * 0.3, r);
-  sky *= 1.0 - uHaloI * 0.045 * inside * (1.0 - midGlow);
+  sky *= 1.0 - uHaloI * 0.03 * inside * (1.0 - midGlow);
 
   vec3 light = vec3(0.0);
 
@@ -76,7 +76,7 @@ void main() {
     ringProfile(r, uHaloR * 1.014, wIn, wOut)
   );
   vec3 ringCol = mix(vec3(ring.g), ring, 0.4) * tint;
-  light += ringCol * azimuth * uHaloI * 0.3;
+  light += ringCol * azimuth * uHaloI * 0.55;
 
   // Верхняя касательная дуга: касается гало сверху и уходит в стороны.
   float arcR = uHaloR * 1.6;
@@ -103,12 +103,12 @@ void main() {
   // Вертикальный столб света: вниз сильнее и шире, вверх короче.
   float below = max(-q.y, 0.0);
   float above = max(q.y, 0.0);
-  float pw = 0.011 + below * 0.1 + above * 0.03;
+  float pw = 0.014 + below * 0.11 + above * 0.03;
   float streak = 0.62 + 0.38 * gnoise(vec2(q.x * 85.0, below * 1.7 + 3.0), 0.0);
   float column = exp(-(q.x * q.x) / (pw * pw));
   float downBeam = column * smoothstep(0.0, 0.05, below) * exp(-below / 0.5) * streak;
   float upBeam = column * smoothstep(0.0, 0.03, above) * exp(-above / 0.2) * 0.45;
-  light += cool * (downBeam * 0.85 + upBeam) * uPillar * uGlowK;
+  light += cool * (downBeam * 2.6 + upBeam * 1.4) * uPillar * uGlowK;
 
   // Лучи бликов: две сетки тонких спиц, мерцание от верхних полос.
   float spikes = pow(abs(cos(a * 3.0 + 0.4)), 90.0) + 0.6 * pow(abs(cos(a * 5.0 + 1.1)), 160.0);
@@ -129,7 +129,7 @@ void main() {
 `;
 
 const params: ParamSchema<SkyHaloParams> = {
-  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.35 },
+  depth: { kind: "slider", label: "ГЛУБИНА НЕБА", min: 0, max: 1, step: 0.01, default: 0.8 },
   sunHeight: { kind: "slider", label: "ВЫСОТА СОЛНЦА", min: -0.2, max: 0.3, step: 0.01, default: 0.1 },
   halo: { kind: "slider", label: "СИЛА ГАЛО", min: 0, max: 1, step: 0.01, default: 0.7 },
   pillar: { kind: "slider", label: "СТОЛБ СВЕТА", min: 0, max: 1, step: 0.01, default: 0.6 },
@@ -156,7 +156,7 @@ export const skyHalo = defineHero({
     };
     return {
       uniforms,
-      update: (frame, values) => {
+      update: (frame, values, view) => {
         const u = uniforms;
         const { rms, bands, onset } = frame.audio;
         const level = clamp(rms * 1.4, 0, 1);
@@ -167,7 +167,7 @@ export const skyHalo = defineHero({
         u.uTheta.value = loopPhase(frame.bar, LOOP_BARS) * Math.PI * 2;
         u.uDepth.value = values.depth;
         u.uSunY.value = values.sunHeight;
-        u.uHaloR.value = 0.3 * (1 + 0.012 * r * pulse);
+        u.uHaloR.value = 0.3 * Math.min(1, view.aspect * 1.3) * (1 + 0.012 * r * pulse);
         u.uHaloI.value = clamp(values.halo * (0.6 + 0.9 * r * pulse), 0, 1.5);
         u.uDogsI.value = clamp(values.halo * (0.45 + 1.1 * r * pulse), 0, 1.6);
         u.uPillar.value = values.pillar;
